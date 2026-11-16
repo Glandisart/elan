@@ -1,0 +1,47 @@
+name: APK Android (Huawei)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Embarquer la web app dans l'APK
+        run: |
+          mkdir -p android/app/src/main/assets/www
+          cp -r index.html manifest.webmanifest icons android/app/src/main/assets/www/
+
+      - name: Compiler l'APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Publier la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk Elan.apk
+          gh release create "apk-${{ github.run_number }}" Elan.apk \
+            --title "Élan Android – version ${{ github.run_number }}" \
+            --notes "APK pour Android et Huawei (EMUI, HarmonyOS 2 à 4). Télécharge Elan.apk sur le téléphone et ouvre-le pour l'installer." \
+            --latest

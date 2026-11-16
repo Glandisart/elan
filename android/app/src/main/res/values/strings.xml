@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Élan</string>
+    <string name="a11y_label">Élan – blocage d\'applis</string>
+    <string name="a11y_desc">Permet à Élan de détecter quelle appli s\'ouvre pour bloquer les applis distrayantes pendant tes blocs de focus et celles que tu as bloquées en permanence. Élan ne lit pas le contenu de tes écrans et rien ne quitte ton téléphone.</string>
+</resources>

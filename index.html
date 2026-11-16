@@ -101,6 +101,7 @@ nav small{font-size:10px;color:var(--ac2);font-weight:700;min-height:12px}
 'use strict';
 /* ---------- utilitaires ---------- */
 const KEY='elan-v1', PX=1.2;
+const NATIVE=(typeof window.ElanNative==='object'&&window.ElanNative)||null;
 const $=s=>document.querySelector(s);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -113,7 +114,7 @@ const fmtDur=min=>{min=Math.max(0,Math.round(min));if(min<60)return min+' min';c
 const fmtClock=sec=>{sec=Math.max(0,Math.ceil(sec));return pad(Math.floor(sec/60))+':'+pad(sec%60)};
 const COLORS=['#7c8cff','#ff8a65','#3ecf8e','#f06292','#e0a030','#4fb3e8','#ba68c8'];
 const colorFor=s=>{let h=0;for(const c of String(s||''))h=(h*31+c.charCodeAt(0))|0;return COLORS[Math.abs(h)%COLORS.length]};
-const vibrate=(p=[200,100,200])=>{try{if(S.settings.vib&&navigator.vibrate)navigator.vibrate(p)}catch(e){}};
+const vibrate=(p=[200,100,200])=>{try{if(!S.settings.vib)return;if(NATIVE){NATIVE.vibrate([].concat(p)[0]||200);return}if(navigator.vibrate)navigator.vibrate(p)}catch(e){}};
 
 /* ---------- données ---------- */
 function defaults(){
@@ -312,13 +313,14 @@ V.focus=function(){
   let msg='';
   if(!brk&&mode!=='off'){
     if(T.dead)msg='🥀 Ton arbre a fané… tes minutes comptent quand même.';
-    else if(T.state==='run')msg=mode==='strict'?`Ton ${SPN[T.species]||'arbre'} pousse. Si tu quittes Élan plus de ${GRACE} s, il fane.`:`Ton ${SPN[T.species]||'arbre'} pousse tranquillement 🌱`;
+    else if(T.state==='run')msg=mode==='strict'?(NATIVE?`Ton ${SPN[T.species]||'arbre'} pousse. Les applis non autorisées sont bloquées 🛡️`:`Ton ${SPN[T.species]||'arbre'} pousse. Si tu quittes Élan plus de ${GRACE} s, il fane.`):`Ton ${SPN[T.species]||'arbre'} pousse tranquillement 🌱`;
     else if(T.state==='pause')msg='Ton arbre attend que tu reprennes 🌱';
     else msg='Lance un bloc pour planter un arbre 🌱';
   }
   return `<h1>${brk?'☕ Pause':'🎯 Focus'}</h1>
   ${brk?'<p class="mut sm">Lève-toi, bouge, bois de l’eau. Évite les écrans si tu peux 😉</p>':`<select data-f="ftask" aria-label="Tâche"><option value="">— Sans tâche précise —</option>${opts}</select>`}
   ${nx&&!brk?`<div class="card row"><button class="chk" data-a="toggleSub" data-id="${task.id}" data-s="${nx.id}"></button><div class="grow"><div class="sm mut">Prochaine micro-étape</div><b>${esc(nx.t)}</b></div></div>`:''}
+  ${NATIVE&&!NATIVE.a11yEnabled()?'<div class="warn">🛡️ Le blocage d’applis n’est pas encore activé. <a href="#" data-a="blockGuide">Le configurer</a></div>':''}
   ${vis}
   <div class="bigtime" id="ttime"></div>
   ${msg?`<p class="center sm mut" style="margin:0 0 6px">${msg}</p>`:''}
@@ -326,12 +328,12 @@ V.focus=function(){
   ${exc?`<div class="card sm row"><span class="grow">📱 Exception <b>${esc(T.exceptApp)}</b> · reviens dans <b id="exctime"></b></span><button class="chip" data-a="excEnd">Je suis revenu·e</button></div>`:''}
   ${T.state==='idle'&&!brk?`<div class="chips center">${[5,15,25,45,60].map(m=>`<button class="chip ${T.total===m*60?'on':''}" data-a="setDur" data-id="${m}">${m} min</button>`).join('')}</div>`:''}
   <div class="row center wrap" style="margin-top:8px">${btns}</div>
-  ${T.state==='run'&&!brk&&mode==='strict'&&!T.dead&&!exc?'<button class="btn big" data-a="excSheet">📱 J’ai besoin d’une autre appli</button>':''}
+  ${T.state==='run'&&!brk&&mode==='strict'&&!T.dead&&!exc&&!NATIVE?'<button class="btn big" data-a="excSheet">📱 J’ai besoin d’une autre appli</button>':''}
   ${today.length?`<div class="card sm">Ta forêt aujourd’hui<div class="forest">${today.map(treeEmoji).join('')}</div></div>`:''}
   <h2>Ambiance sonore</h2><div class="chips">${Object.keys(snd).map(k=>`<button class="chip ${S.settings.sound===k?'on':''}" data-a="sound" data-id="${k}">${snd[k]}</button>`).join('')}</div>
   <div class="card"><div class="sm mut">Une idée parasite ? Gare-la ici, elle ira dans tes tâches sans casser ton élan.</div>
   <div class="row" style="margin-top:8px"><input id="park" placeholder="Ex : rappeler la banque" enterkeyhint="done" autocomplete="off"><button class="btn" data-a="park">Garer</button></div></div>
-  <button class="btn big" data-a="blockGuide">🛡️ Bloquer mes applis distrayantes</button>
+  <button class="btn big" data-a="blockGuide">🛡️ ${NATIVE?'Gérer le blocage d’applis':'Bloquer mes applis distrayantes'}</button>
   <div class="card sm">👥 <b>Body doubling</b> : travailler « avec » quelqu’un aide à démarrer et à tenir. Un appel visio silencieux avec un·e ami·e, ou des sessions avec binôme sur <a href="https://www.focusmate.com" target="_blank" rel="noopener">Focusmate</a>.</div>`;
 };
 V.routines=function(){
@@ -353,7 +355,7 @@ V.stats=function(){
   <div class="row center" style="margin-top:14px;gap:22px"><div><div class="num">${S.points}</div><div class="sm mut">points</div></div><div><div class="num">${streak()}🔥</div><div class="sm mut">jours d’affilée</div></div><div><div class="num">${fmtDur(a.focus)}</div><div class="sm mut">focus aujourd’hui</div></div></div></div>
   <h2>Ma forêt (7 jours)</h2><div class="card">${(()=>{const wk=S.garden.filter(g=>g.d>=days[0].k),al=wk.filter(g=>!g.dead).length;
     return wk.length?`<div class="forest">${wk.map(treeEmoji).join('')}</div><div class="sm mut">${al} arbre(s) planté(s)${wk.length-al?` · ${wk.length-al} fané(s)`:''} · ${S.garden.filter(g=>!g.dead).length} au total</div>`:'<span class="sm mut">Termine un bloc de focus pour planter ton premier arbre 🌱</span>'})()}
-  <button class="btn" data-a="blockGuide" style="margin-top:10px;display:block">🛡️ Bloquer mes applis distrayantes</button></div>
+  <button class="btn" data-a="blockGuide" style="margin-top:10px;display:block">🛡️ ${NATIVE?'Gérer le blocage d’applis':'Bloquer mes applis distrayantes'}</button></div>
   <h2>Focus des 7 derniers jours</h2><div class="card"><div class="weekbars">${days.map(x=>`<div class="wb"><small>${x.m||''}</small><i style="height:${Math.round(x.m/mx*100)}%"></i><span>${x.l}</span></div>`).join('')}</div></div>
   <h2>Temps par client (7 jours)</h2><div class="card">${Object.keys(per).length?Object.entries(per).sort((x,y)=>y[1]-x[1]).map(([c,m])=>`<div class="row" style="padding:4px 0"><span class="grow" style="color:${colorFor(c)}">● <span style="color:var(--tx)">${esc(c)}</span></span><b>${fmtDur(m)}</b></div>`).join(''):'<span class="sm mut">Lance un focus sur une tâche liée à un client pour suivre ton temps facturable.</span>'}</div>
   <h2>Estimation vs réalité</h2><div class="card sm">${er.n>=3?`Sur tes ${er.n} dernières tâches, le temps réel a été en moyenne <b>×${er.r.toFixed(1).replace('.',',')}</b> ton estimation. « ⚡ Placer mes priorités » utilise ce coefficient pour prévoir assez de temps.`:'Termine des tâches avec une durée estimée et du temps de focus : l’appli calculera ton coefficient « estimation → réalité » (très utile contre la cécité temporelle).'}</div>
@@ -361,13 +363,13 @@ V.stats=function(){
   <div class="grid2"><label>Début de journée<input type="time" data-f="set:dayStart" value="${st.dayStart}"></label><label>Fin de journée<input type="time" data-f="set:dayEnd" value="${st.dayEnd}"></label>
   <label>Bloc focus (min)<input type="number" inputmode="numeric" min="1" max="180" data-f="set:focus" value="${st.focus}"></label><label>Pause (min)<input type="number" inputmode="numeric" min="1" max="60" data-f="set:brk" value="${st.brk}"></label></div>
   <label>Thème<select data-f="set:theme">${[['auto','Automatique'],['dark','Sombre'],['light','Clair']].map(([k,l])=>`<option value="${k}" ${st.theme===k?'selected':''}>${l}</option>`).join('')}</select></label>
-  <label>Arbre pendant le focus<select data-f="set:tree">${[['strict','Strict : fane si je quitte Élan plus de 15 s'],['doux','Doux : ne fane jamais'],['off','Désactivé (minuteur disque)']].map(([k,l])=>`<option value="${k}" ${st.tree===k?'selected':''}>${l}</option>`).join('')}</select></label>
-  <label>Applis autorisées pendant le focus (séparées par des virgules)<input data-f="set:allowed" value="${esc(st.allowed)}" placeholder="Mail, Figma, Calculatrice"></label>
+  <label>Arbre pendant le focus<select data-f="set:tree">${[['strict',NATIVE?'Strict : fane si je force une appli bloquée':'Strict : fane si je quitte Élan plus de 15 s'],['doux','Doux : ne fane jamais'],['off','Désactivé (minuteur disque)']].map(([k,l])=>`<option value="${k}" ${st.tree===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  ${NATIVE?'':`<label>Applis autorisées pendant le focus (séparées par des virgules)<input data-f="set:allowed" value="${esc(st.allowed)}" placeholder="Mail, Figma, Calculatrice"></label>`}
   <label>Vibrations<select data-f="set:vib"><option value="1" ${st.vib?'selected':''}>Activées</option><option value="0" ${st.vib?'':'selected'}>Désactivées</option></select></label>
-  <button class="btn" data-a="notifPerm" style="margin-top:6px">🔔 Activer les notifications</button></div>
+  ${NATIVE?'':'<button class="btn" data-a="notifPerm" style="margin-top:6px">🔔 Activer les notifications</button>'}</div>
   <h2>Sauvegarde</h2><div class="card"><p class="sm mut" style="margin-top:0">Tes données restent sur ce téléphone, sans compte. Exporte-les pour les garder ou les passer sur un autre appareil.</p>
   <div class="row wrap"><button class="btn" data-a="exportData">⬇️ Exporter</button><button class="btn" data-a="importData">⬆️ Importer</button><button class="btn danger" data-a="resetAll">Tout effacer</button></div></div>
-  <h2>Installer l’appli</h2><div class="card sm" style="line-height:1.6"><b>iPhone</b> : ouvre la page dans Safari → bouton Partager → « Sur l’écran d’accueil ».<br><b>Android / Huawei</b> : menu du navigateur (⋮) → « Ajouter à l’écran d’accueil » ou « Installer l’application ».</div>
+  ${NATIVE?'':`<h2>Installer l’appli</h2><div class="card sm" style="line-height:1.6"><b>iPhone</b> : ouvre la page dans Safari → bouton Partager → « Sur l’écran d’accueil ».<br><b>Android / Huawei</b> : menu du navigateur (⋮) → « Ajouter à l’écran d’accueil » ou « Installer l’application ».</div>`}
   <p class="sm mut center">Élan · fonctionne hors-ligne une fois installée</p>`;
 };
 
@@ -408,10 +410,10 @@ function startSound(){stopSound();const type=S.settings.sound;if(type==='off')re
 function stopSound(){try{if(noise)noise.stop()}catch(e){}noise=null}
 function chime(){const A=ac();if(!A)return;try{const t=A.currentTime;[660,880,1320].forEach((f,i)=>{const o=A.createOscillator(),g=A.createGain(),s=t+i*.18;o.type='sine';o.frequency.value=f;
   g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.3,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.7);o.connect(g).connect(A.destination);o.start(s);o.stop(s+.75)})}catch(e){}}
-function notify(title,body){try{if(!('Notification' in window)||Notification.permission!=='granted')return;
+function notify(title,body){try{if(NATIVE){if(document.visibilityState==='hidden')NATIVE.notify(title,body);return}if(!('Notification' in window)||Notification.permission!=='granted')return;
   if(navigator.serviceWorker&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:'elan',vibrate:[200,100,200]})).catch(()=>{});
   else new Notification(title,{body,icon:'icons/icon-192.png'})}catch(e){}}
-async function wake(on){try{if(on&&'wakeLock' in navigator&&!WL){WL=await navigator.wakeLock.request('screen');WL.addEventListener('release',()=>{WL=null})}else if(!on&&WL){await WL.release();WL=null}}catch(e){}}
+async function wake(on){if(NATIVE){try{NATIVE.keepScreenOn(!!on)}catch(e){}return}try{if(on&&'wakeLock' in navigator&&!WL){WL=await navigator.wakeLock.request('screen');WL.addEventListener('release',()=>{WL=null})}else if(!on&&WL){await WL.release();WL=null}}catch(e){}}
 
 /* ---------- minuteur ---------- */
 let tickH=null;
@@ -429,9 +431,9 @@ function drawTimer(){const T=S.timer,w=$('#wedge'),tt=$('#ttime'),nt=$('#navtime
   if(nt)nt.textContent=T.state==='idle'?'':(T.state==='pause'?'⏸ ':'')+fmtClock(T.left)}
 function startFocus(taskId,min){const T=S.timer;if(T.state!=='idle'){toast('Un bloc est déjà en cours');go('focus');return}
   T.mode='focus';T.taskId=taskId||'';T.total=T.left=Math.round(min*60);closeSheet();UI.tab='focus';run()}
-function run(){const T=S.timer;if(T.state==='idle'&&T.mode==='focus'){T.species=pickSpecies();T.dead=false;T.plantedLeft=T.left;T.exceptUntil=0;T.hiddenAt=0}T.state='run';T.endAt=Date.now()+T.left*1000;save();startSound();wake(true);ensureTick();go('focus')}
-function pauseT(){const T=S.timer;T.left=Math.max(0,(T.endAt-Date.now())/1000);T.state='pause';stopSound();wake(false);save();render()}
-function resetT(mode){const T=S.timer;T.state='idle';T.dead=false;T.exceptUntil=0;T.hiddenAt=0;T.plantedLeft=0;T.mode=mode||'focus';T.total=T.left=(T.mode==='focus'?S.settings.focus:S.settings.brk)*60;stopSound();wake(false);save()}
+function run(){const T=S.timer;if(T.state==='idle'&&T.mode==='focus'){T.species=pickSpecies();T.dead=false;T.plantedLeft=T.left;T.exceptUntil=0;T.hiddenAt=0}T.state='run';T.endAt=Date.now()+T.left*1000;save();if(NATIVE){try{if(T.mode==='focus')NATIVE.focusStart(T.endAt);else NATIVE.focusStop()}catch(e){}}startSound();wake(true);ensureTick();go('focus')}
+function pauseT(){const T=S.timer;T.left=Math.max(0,(T.endAt-Date.now())/1000);T.state='pause';if(NATIVE)try{NATIVE.focusStop()}catch(e){}stopSound();wake(false);save();render()}
+function resetT(mode){const T=S.timer;if(NATIVE)try{NATIVE.focusStop()}catch(e){}T.state='idle';T.dead=false;T.exceptUntil=0;T.hiddenAt=0;T.plantedLeft=0;T.mode=mode||'focus';T.total=T.left=(T.mode==='focus'?S.settings.focus:S.settings.brk)*60;stopSound();wake(false);save()}
 function stopT(){const T=S.timer;if(T.state==='run')T.left=Math.max(0,(T.endAt-Date.now())/1000);const el=(T.total-T.left)/60;
   if(T.mode==='focus'&&el>=1){const pts=logFocus(el,T.taskId,false);toast(`${fmtDur(el)} de focus comptées (+${pts} pts)${S.settings.tree!=='off'&&!T.dead?' — pas d’arbre cette fois, mais':'.'} chaque minute compte 💪`)}
   resetT('focus');render()}
@@ -448,13 +450,32 @@ function finishT(){const T=S.timer;stopSound();wake(false);chime();vibrate([300,
 
 function checkTree(){const T=S.timer;if(!T.hiddenAt)return;const h=T.hiddenAt;T.hiddenAt=0;
   if(T.state!=='run'||T.mode!=='focus'||T.dead||S.settings.tree!=='strict'){save();return}
+  if(NATIVE){let d=false;try{d=NATIVE.distractedSince(h)}catch(e){}if(d)killTree((Date.now()-h)/1000);else save();return}
   const deadline=Math.max(h,T.exceptUntil||0)+GRACE*1000,until=Math.min(Date.now(),T.endAt);
   if(until>deadline)killTree((Date.now()-h)/1000);else save()}
 function killTree(away){const T=S.timer;T.dead=true;T.exceptUntil=0;const left=Math.max(0,(T.endAt-Date.now())/1000);
   S.garden.push({d:dkey(),sp:T.species||'chene',min:Math.round(((T.plantedLeft||T.total)-left)/60),dead:true});save();render();vibrate([400]);
-  sheet(`<div class="center"><div style="font-size:52px">🥀</div><h3>Ton arbre a fané</h3><p class="mut sm">Tu as quitté Élan pendant ${away<90?Math.round(away)+' s':fmtDur(away/60)}. Le minuteur a continué et tes minutes de focus comptent quand même.</p></div>
+  sheet(`<div class="center"><div style="font-size:52px">🥀</div><h3>Ton arbre a fané</h3><p class="mut sm">${NATIVE?'Tu as forcé l’ouverture d’une appli bloquée.':`Tu as quitté Élan pendant ${away<90?Math.round(away)+' s':fmtDur(away/60)}.`} Le minuteur a continué et tes minutes de focus comptent quand même.</p></div>
   <button class="btn pri big" data-a="replant">🌱 Replanter et continuer</button><button class="btn big" data-a="closeSheet">Continuer sans arbre</button>
   <p class="sm mut center">Besoin d’une autre appli ? Utilise « 📱 J’ai besoin d’une autre appli » avant de sortir.</p>`)}
+/* ---------- blocage natif (appli Android) ---------- */
+function bmConf(){try{return JSON.parse(NATIVE.config())}catch(e){return {permanent:[],allowed:[],strict:false}}}
+function bmRows(){const sel=new Set(bmConf()[UI.bm.tab]||[]),q=(UI.bm.q||'').toLowerCase();
+  const apps=UI.apps.filter(a=>!q||a.label.toLowerCase().includes(q)).sort((a,b)=>(sel.has(b.pkg)-sel.has(a.pkg))||a.label.localeCompare(b.label,'fr'));
+  return apps.map(a=>`<div class="row sub" data-a="bmToggle" data-id="${esc(a.pkg)}" style="cursor:pointer"><span class="chk s ${sel.has(a.pkg)?'done':''}"></span><span class="grow">${esc(a.label)}</span></div>`).join('')||'<p class="sm mut">Aucune appli trouvée</p>'}
+function blockManager(){if(!NATIVE)return;UI.bm=UI.bm||{tab:'permanent',q:''};
+  if(!UI.apps){try{UI.apps=JSON.parse(NATIVE.apps())}catch(e){UI.apps=[]}}
+  const on=NATIVE.a11yEnabled(),cfg=bmConf(),perm=UI.bm.tab==='permanent';
+  sheet(`<h3>🛡️ Blocage d’applis</h3>
+  ${on?'<div class="card sm" style="background:var(--card2);margin-top:0">✅ Service de blocage actif</div>':`<div class="warn"><b>Le blocage est désactivé.</b> Active « Élan – blocage d’applis » dans les réglages d’Accessibilité.
+    <button class="btn" data-a="nA11y" style="display:block;margin-top:8px">Ouvrir Accessibilité</button>
+    <div style="margin-top:8px">Interrupteur grisé ? <a href="#" data-a="nAppSettings">Infos de l’appli</a> → menu ⋮ → « Autoriser les paramètres restreints », puis réessaie.</div></div>`}
+  <div class="chips"><button class="chip ${perm?'on':''}" data-a="bmTab" data-id="permanent">⛔ Bloquées tout le temps</button><button class="chip ${perm?'':'on'}" data-a="bmTab" data-id="allowed">✅ Autorisées en focus</button></div>
+  <p class="sm mut">${perm?'Ces applis sont bloquées en permanence, façon AppBlock.':'Pendant un bloc de focus, toutes les autres applis sont bloquées (le téléphone, le clavier et les réglages restent accessibles).'}</p>
+  <input id="bmq" placeholder="Rechercher une appli…" value="${esc(UI.bm.q)}" autocomplete="off">
+  <div id="bmlist" style="margin-top:6px">${bmRows()}</div>
+  <label class="row" style="margin-top:14px;color:var(--tx)"><input type="checkbox" id="bmstrict" ${cfg.strict?'checked':''} style="width:auto;margin:0"> <span>Mode strict : pas de bouton « Ouvrir quand même »</span></label>
+  <button class="btn pri big" data-a="closeSheet">Terminé</button>`)}
 /* ---------- routines (mode pas à pas) ---------- */
 let RR=null;
 function runRoutine(id){const r=S.routines.find(x=>x.id===id);if(!r||!r.steps.length){toast('Ajoute d’abord des étapes');return}RR={r,i:0};wake(true);buildRR()}
@@ -481,7 +502,7 @@ let RS_ROW=null;
 /* ---------- export / import ---------- */
 function exportData(){const json=JSON.stringify(S);
   sheet(`<h3>Exporter mes données</h3><p class="sm mut">Copie ce texte (ou télécharge le fichier) et colle-le dans « Importer » sur l’autre appareil.</p>
-  <textarea id="exptxt" readonly>${esc(json)}</textarea><button class="btn pri big" data-a="copyExp">📋 Copier</button><button class="btn big" data-a="dlExp">⬇️ Télécharger le fichier</button>`)}
+  <textarea id="exptxt" readonly>${esc(json)}</textarea><button class="btn pri big" data-a="copyExp">📋 Copier</button>${NATIVE?'':'<button class="btn big" data-a="dlExp">⬇️ Télécharger le fichier</button>'}`)}
 function importData(){sheet(`<h3>Importer des données</h3><p class="sm mut">Colle un export ou choisis un fichier .json. ⚠️ Cela remplace les données actuelles.</p>
   <textarea id="imptxt" placeholder="Colle ici…"></textarea><input type="file" id="impfile" accept=".json,application/json" style="margin-top:8px"><button class="btn pri big" data-a="doImport">Importer</button>`)}
 function doImport(txt){try{const o=JSON.parse(txt);if(!o||!Array.isArray(o.tasks))throw 0;const d=defaults();S=Object.assign(d,o);S.settings=Object.assign(defaults().settings,o.settings||{});S.timer=Object.assign(defaults().timer,o.timer||{},{state:'idle'});
@@ -552,7 +573,7 @@ const A={
   setDur(m){const T=S.timer;T.total=T.left=(+m)*60;save();render()},
   resumeT(){run()},
   pauseT, stopT,
-  plus5(){const T=S.timer;T.total+=300;if(T.plantedLeft)T.plantedLeft+=300;if(T.state==='run')T.endAt+=300000;else T.left+=300;save();drawTimer()},
+  plus5(){const T=S.timer;T.total+=300;if(T.plantedLeft)T.plantedLeft+=300;if(T.state==='run')T.endAt+=300000;else T.left+=300;save();if(NATIVE&&T.state==='run'&&T.mode==='focus')try{NATIVE.focusStart(T.endAt)}catch(e){}drawTimer()},
   skipBreak(){resetT('focus');render()},
   startBreak(){closeSheet();const T=S.timer;T.mode='break';T.total=T.left=S.settings.brk*60;run()},
   again(){closeSheet();const tid=S.timer.taskId;resetT('focus');S.timer.taskId=tid;run()},
@@ -566,7 +587,7 @@ const A={
   excPick(id,el){document.querySelectorAll('#excApps .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');UI.excApp=id},
   excGo(m){const T=S.timer;T.exceptUntil=Date.now()+(+m)*60000;T.exceptApp=UI.excApp||'Autre';save();closeSheet();render();toast(`Exception ${T.exceptApp} : ${m} min. À tout de suite !`)},
   excEnd(){S.timer.exceptUntil=0;save();render()},
-  blockGuide(){sheet(`<h3>🛡️ Bloquer les applis distrayantes</h3>
+  blockGuide(){if(NATIVE){blockManager();return}sheet(`<h3>🛡️ Bloquer les applis distrayantes</h3>
     <p class="sm mut">Une web app n’a pas le droit de bloquer d’autres applis (iOS et Android l’interdisent). Ton téléphone sait le faire lui-même, gratuitement : à régler une seule fois.</p>
     <div class="card" style="background:var(--card2)"><b>iPhone · blocage permanent (façon AppBlock)</b><ol class="sm">
     <li>Réglages → Temps d’écran → Limites d’app → Ajouter une limite.</li><li>Choisis les applis (réseaux sociaux, jeux…), mets 1 min et active « Bloquer à la fin de la limite ».</li><li>Mets un code Temps d’écran, idéalement choisi par quelqu’un d’autre, pour ne pas craquer.</li></ol>
@@ -574,6 +595,11 @@ const A={
     <b>iPhone · astuce « redirection »</b><ol class="sm"><li>App Raccourcis → Automatisation → + → App.</li><li>Choisis Instagram, TikTok… → « Est ouverte » → « Exécuter immédiatement ».</li><li>Action « Aller à l’écran d’accueil » (+ « Afficher une notification » : « Tu es en focus 🌱 »).</li></ol></div>
     <div class="card" style="background:var(--card2)"><b>Huawei</b><ol class="sm"><li>Paramètres → Équilibre digital → Gestion du temps d’écran.</li><li>Limites d’applications : choisis les applis à bloquer et une limite très courte.</li><li>Laisse le Navigateur (qui fait tourner Élan) et tes applis de travail hors limite.</li><li>Protège le tout avec un code PIN.</li></ol></div>
     <button class="btn big" data-a="closeSheet">Compris</button>`)},
+  nA11y(){NATIVE&&NATIVE.openA11ySettings()},
+  nAppSettings(){NATIVE&&NATIVE.openAppSettings()},
+  bmTab(id){UI.bm.tab=id;UI.bm.q='';blockManager()},
+  bmToggle(pkg,el){const cfg=bmConf(),s=new Set(cfg[UI.bm.tab]||[]);if(s.has(pkg))s.delete(pkg);else s.add(pkg);
+    NATIVE.setList(UI.bm.tab,JSON.stringify([...s]));const c=el.querySelector('.chk');if(c)c.classList.toggle('done',s.has(pkg));vibrate([15])},
   runRoutine, editRoutine,
   rrNext(){if(!RR)return;if(RR.i+1>=RR.r.steps.length)endRR(true);else{RR.i++;vibrate([25]);buildRR()}},
   rrQuit(){endRR(false)},
@@ -585,7 +611,7 @@ const A={
   notifPerm(){if(!('Notification' in window)){toast('Notifications indisponibles ici. Sur iPhone, installe d’abord l’appli sur l’écran d’accueil.');return}
     try{Notification.requestPermission().then(p=>toast(p==='granted'?'Notifications activées 🔔':'Notifications refusées')).catch(()=>toast('Notifications indisponibles ici'))}catch(e){toast('Notifications indisponibles ici')}},
   exportData, importData,
-  copyExp(){const t=$('#exptxt');try{navigator.clipboard.writeText(t.value).then(()=>toast('Copié ✓'),()=>{t.select();toast('Sélectionné : copie-le manuellement')})}catch(e){t.select();toast('Sélectionné : copie-le manuellement')}},
+  copyExp(){const t=$('#exptxt');if(NATIVE){NATIVE.copy(t.value);toast('Copié ✓');return}try{navigator.clipboard.writeText(t.value).then(()=>toast('Copié ✓'),()=>{t.select();toast('Sélectionné : copie-le manuellement')})}catch(e){t.select();toast('Sélectionné : copie-le manuellement')}},
   dlExp(){try{const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='elan-sauvegarde-'+dkey()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}catch(e){toast('Téléchargement impossible ici : utilise Copier')}},
   doImport(){const f=$('#impfile');if(f&&f.files&&f.files[0]){const r=new FileReader();r.onload=()=>doImport(r.result);r.readAsText(f.files[0])}else doImport($('#imptxt').value)},
   resetAll(){sheet(`<h3>Tout effacer ?</h3><p class="mut">Tâches, routines, points… tout sera supprimé de ce téléphone. Pense à exporter avant.</p><button class="btn big" data-a="closeSheet">Annuler</button><button class="btn danger big" data-a="confirmReset">Oui, tout effacer</button>`)},
@@ -598,7 +624,8 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.target;
   if(t.id==='cap'){e.preventDefault();A.capture()}else if(t.id==='park'){e.preventDefault();A.park()}else if(t.id==='newprio'){e.preventDefault();A.newPrio()}
   else if(t.dataset&&t.dataset.f==='newsub'){e.preventDefault();A.addSub(t.dataset.id)}else if(t.dataset&&t.dataset.f==='title'){t.blur()}});
-document.addEventListener('change',e=>{const t=e.target,f=t.dataset&&t.dataset.f;if(!f)return;
+document.addEventListener('input',e=>{if(e.target.id==='bmq'){UI.bm.q=e.target.value;const l=$('#bmlist');if(l)l.innerHTML=bmRows()}});
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='bmstrict'&&NATIVE){NATIVE.setStrict(t.checked);toast(t.checked?'Mode strict activé 🔒':'Mode strict désactivé');return}const f=t.dataset&&t.dataset.f;if(!f)return;
   if(f.startsWith('set:')){const k=f.slice(4);let v=t.value;if(k==='focus'||k==='brk')v=Math.min(k==='focus'?180:60,Math.max(1,parseInt(v)||1));if(k==='vib')v=v==='1';
     S.settings[k]=v;if((k==='focus'||k==='brk')&&S.timer.state==='idle')resetT(S.timer.mode);save();if(k==='theme')document.documentElement.dataset.theme=v;if(k==='tree'&&UI.tab==='focus')render();return}
   if(f==='ftask'){S.timer.taskId=t.value;save();render();return}
@@ -607,8 +634,8 @@ document.addEventListener('change',e=>{const t=e.target,f=t.dataset&&t.dataset.f
   S.blocks.forEach(b=>{if(b.taskId===task.id)b.t=task.title});save()});
 document.addEventListener('visibilitychange',()=>{const T=S.timer;
   if(document.visibilityState==='hidden'){if(T.state==='run'&&T.mode==='focus'&&S.settings.tree==='strict'&&!T.dead){T.hiddenAt=Date.now();save();
-    if(!(T.exceptUntil>Date.now()))notify('🌱 Ton arbre pousse…',`Reviens dans ${GRACE} secondes, sinon il va faner.`)}return}
-  checkTree();if(T.state==='run'){wake(true);tick()}liveToday()});
+    if(!NATIVE&&!(T.exceptUntil>Date.now()))notify('🌱 Ton arbre pousse…',`Reviens dans ${GRACE} secondes, sinon il va faner.`)}return}
+  checkTree();if(T.state==='run'){wake(true);tick()}liveToday();if(NATIVE&&$('#bmq')){render();blockManager()}});
 
 /* rappels doux des blocs : 5 min avant + au début */
 const notified=new Set();
