@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Élan">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>Élan – organisation TDAH</title>
+<style>
+:root{--bg:#14161f;--card:#1f2230;--card2:#2a2e40;--tx:#eef0f7;--mut:#9aa0b8;--ac:#7c8cff;--ac2:#ff6b6b;--ok:#3ecf8e;--warn:#ffb547;--line:#353a50;--r:16px}
+[data-theme=light]{--bg:#f4f5fa;--card:#fff;--card2:#eceef6;--tx:#1b1d2a;--mut:#666b84;--line:#dcdfeb}
+@media (prefers-color-scheme: light){[data-theme=auto]{--bg:#f4f5fa;--card:#fff;--card2:#eceef6;--tx:#1b1d2a;--mut:#666b84;--line:#dcdfeb}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+main{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 96px)}
+h1{font-size:28px;margin:6px 0 12px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:22px 0 6px;font-weight:700}
+h3{margin:4px 0 10px;font-size:20px}
+a{color:var(--ac)}
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin:10px 0}
+.row{display:flex;gap:8px;align-items:center}.wrap{flex-wrap:wrap}.grow{flex:1;min-width:0}.center{text-align:center;justify-content:center}
+.mut{color:var(--mut)}.sm{font-size:13px}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:600;font-size:16px;background:var(--card2);color:var(--tx);cursor:pointer;font-family:inherit}
+.btn:active,.chip:active,.play:active{transform:scale(.96)}
+.btn.pri{background:var(--ac);color:#fff}.btn.danger{background:var(--ac2);color:#fff}
+.btn.big{display:block;width:100%;padding:16px;font-size:17px;margin-top:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.chip{display:inline-flex;align-items:center;gap:4px;border:0;padding:6px 12px;border-radius:999px;background:var(--card2);font-size:13px;color:var(--mut);font-family:inherit;cursor:pointer}
+.chip.on{background:var(--ac);color:#fff}
+input,select,textarea{font-size:16px;font-family:inherit;background:var(--card2);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}
+textarea{min-height:120px;font-size:13px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0}
+label input,label select{margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.task{display:flex;gap:12px;align-items:center}
+.tt{font-weight:600;font-size:16px;word-break:break-word}
+.meta{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.meta .chip{padding:2px 8px;font-size:12px;cursor:default}
+.chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--mut);background:transparent;flex:none;display:grid;place-items:center;cursor:pointer;padding:0;color:#fff;font-size:16px}
+.chk.done{background:var(--ok);border-color:var(--ok)}.chk.done::after{content:"✓"}
+.chk.s{width:24px;height:24px;font-size:13px}
+.play{width:42px;height:42px;border-radius:50%;border:0;background:var(--ac);color:#fff;font-size:16px;flex:none;cursor:pointer}
+.isdone .tt{text-decoration:line-through;color:var(--mut)}
+.strike{text-decoration:line-through;color:var(--mut)}
+.editor{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.sub{padding:5px 0}
+.x{border:0;background:none;color:var(--mut);font-size:16px;padding:6px;cursor:pointer}
+.slot{display:block;width:100%;border:2px dashed var(--line);background:none;color:var(--mut);border-radius:12px;padding:14px;font-size:15px;margin:6px 0;cursor:pointer;font-family:inherit}
+.prio{padding:8px 0;border-bottom:1px solid var(--line)}.prio:last-child{border-bottom:0}
+.clock{font-size:46px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.date{text-transform:capitalize}
+.bar{height:8px;background:var(--card2);border-radius:8px;overflow:hidden;margin-top:8px}.bar>i{display:block;height:100%;background:var(--ac);border-radius:8px;transition:width .5s}
+.plantmini{text-align:center;font-size:34px;cursor:pointer;line-height:1}.plantmini small{display:block;font-size:11px;color:var(--mut);margin-top:4px}
+.timeline{position:relative;margin:4px 0}
+.hour{border-top:1px solid var(--line);position:relative}.hour span{position:absolute;top:-8px;left:0;font-size:11px;color:var(--mut);background:var(--card);padding-right:4px}
+.block{position:absolute;left:46px;right:4px;border-radius:10px;padding:4px 8px;font-size:13px;overflow:hidden;color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.block span{opacity:.85;font-size:11px}.block.bdone{opacity:.4}
+.now{position:absolute;left:40px;right:0;height:2px;background:var(--ac2);z-index:2;pointer-events:none}.now::before{content:"";position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--ac2)}
+.disk{width:min(74vw,290px);display:block;margin:14px auto 4px}
+.bigtime{text-align:center;font-size:54px;font-weight:800;font-variant-numeric:tabular-nums}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;z-index:50;animation:fade .15s}
+.sheet{background:var(--card);width:100%;max-width:560px;margin:0 auto;border-radius:22px 22px 0 0;padding:20px 16px calc(env(safe-area-inset-bottom) + 20px);max-height:88vh;overflow:auto;animation:up .2s}
+.sheet ul{padding-left:18px;line-height:1.6}
+.pick{display:block;width:100%;text-align:left;border:0;background:var(--card2);color:var(--tx);border-radius:12px;padding:12px;margin:6px 0;font-size:15px;font-family:inherit;cursor:pointer}
+@keyframes up{from{transform:translateY(40px);opacity:0}}@keyframes fade{from{opacity:0}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 84px);background:var(--tx);color:var(--bg);padding:12px 16px;border-radius:14px;font-size:14px;z-index:80;max-width:90vw;box-shadow:0 4px 16px rgba(0,0,0,.3);animation:fade .2s}
+.tbtn{border:0;background:var(--ac);color:#fff;border-radius:8px;padding:4px 10px;margin-left:8px;font-weight:700}
+.overlay{position:fixed;inset:0;background:var(--bg);z-index:60;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 20px)}
+.overlay .stepTxt{font-size:30px;font-weight:800;text-align:center;margin:auto 0 10px}
+.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:99}
+.weekbars{display:flex;align-items:flex-end;gap:8px;height:120px}
+.wb{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:11px;color:var(--mut)}
+.wb i{display:block;width:100%;background:var(--ac);border-radius:6px 6px 2px 2px;min-height:3px}
+.plant{font-size:72px;line-height:1.1}
+.num{font-size:22px;font-weight:800}
+.warn{background:var(--warn);color:#000;border-radius:12px;padding:10px;font-size:13px;margin-bottom:10px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:40}
+nav button{border:0;background:none;color:var(--mut);font-size:11px;padding:8px 0 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit;cursor:pointer}
+nav button span{font-size:22px}nav button.on{color:var(--ac);font-weight:700}
+nav small{font-size:10px;color:var(--ac2);font-weight:700;min-height:12px}
+</style>
+</head>
+<body>
+<main id="main"></main>
+<nav id="nav">
+  <button data-a="tab" data-id="today" data-tab="today"><span>🏠</span>Aujourd’hui</button>
+  <button data-a="tab" data-id="tasks" data-tab="tasks"><span>📝</span>Tâches</button>
+  <button data-a="tab" data-id="focus" data-tab="focus"><span>🎯</span>Focus<small id="navtime"></small></button>
+  <button data-a="tab" data-id="routines" data-tab="routines"><span>🔁</span>Routines</button>
+  <button data-a="tab" data-id="stats" data-tab="stats"><span>🌱</span>Bilan</button>
+</nav>
+<script>
+(function(){
+'use strict';
+/* ---------- utilitaires ---------- */
+const KEY='elan-v1', PX=1.2;
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const dkey=(d=new Date())=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const toMin=hm=>{const p=String(hm||'0:0').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};
+const fromMin=m=>pad(Math.floor(m/60)%24)+':'+pad(Math.round(m%60)%60);
+const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()+d.getSeconds()/60};
+const fmtDur=min=>{min=Math.max(0,Math.round(min));if(min<60)return min+' min';const h=Math.floor(min/60),m=min%60;return h+' h'+(m?' '+pad(m):'')};
+const fmtClock=sec=>{sec=Math.max(0,Math.ceil(sec));return pad(Math.floor(sec/60))+':'+pad(sec%60)};
+const COLORS=['#7c8cff','#ff8a65','#3ecf8e','#f06292','#e0a030','#4fb3e8','#ba68c8'];
+const colorFor=s=>{let h=0;for(const c of String(s||''))h=(h*31+c.charCodeAt(0))|0;return COLORS[Math.abs(h)%COLORS.length]};
+const vibrate=(p=[200,100,200])=>{try{if(S.settings.vib&&navigator.vibrate)navigator.vibrate(p)}catch(e){}};
+
+/* ---------- données ---------- */
+function defaults(){
+  const st=(t,m)=>({id:uid(),t,m});
+  return {
+    v:1,
+    tasks:[{id:uid(),title:'Exemple : relancer un client pour le devis',est:15,client:'Exemple',due:'',done:false,today:true,spent:0,created:Date.now(),
+      subs:[{id:uid(),t:'Ouvrir le dernier mail échangé',done:false},{id:uid(),t:'Écrire 2 phrases : rappel + question',done:false},{id:uid(),t:'Envoyer',done:false}]}],
+    blocks:[],
+    routines:[
+      {id:uid(),name:'☀️ Lancement de journée',steps:[st('Boire un grand verre d’eau',1),st('Regarder l’agenda du jour',2),st('Choisir mes 3 priorités',3),st('Téléphone loin / mode concentration',1),st('Lancer le premier bloc de focus',1)]},
+      {id:uid(),name:'🌙 Clôture de journée',steps:[st('Noter où j’en suis sur la tâche en cours',3),st('Choisir la 1ʳᵉ tâche de demain',2),st('Laisser le fichier ouvert, ranger le bureau',2),st('Vérifier mon temps par client',2)]},
+      {id:uid(),name:'🧘 Reset quand je décroche',steps:[st('Me lever et m’étirer',2),st('Boire de l’eau',1),st('3 respirations lentes',1),st('Relire ma prochaine micro-étape',1)]}
+    ],
+    rdone:{}, act:{}, log:[], points:0,
+    settings:{dayStart:'09:00',dayEnd:'18:00',focus:25,brk:5,theme:'auto',sound:'off',vib:true},
+    timer:{state:'idle',mode:'focus',total:1500,left:1500,endAt:0,taskId:''}
+  };
+}
+let storageOK=true;
+function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){storageOK=false;return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){storageOK=false}}
+let S=(function(){const d=defaults(),s=load();if(!s)return d;const m=Object.assign(d,s);m.settings=Object.assign(defaults().settings,s.settings||{});m.timer=Object.assign(defaults().timer,s.timer||{});return m})();
+// ménage des vieilles données
+(function(){const lim=new Date();lim.setDate(lim.getDate()-14);const k=dkey(lim);S.blocks=S.blocks.filter(b=>b.d>=k);
+  const lim2=new Date();lim2.setDate(lim2.getDate()-180);const k2=dkey(lim2);S.log=S.log.filter(l=>l.d>=k2);
+  Object.keys(S.rdone).forEach(d=>{if(d<k)delete S.rdone[d]});})();
+
+let UI={tab:'today',openTask:null,filter:'all',showDone:false};
+try{const h=location.hash.slice(1);if(['today','tasks','focus','routines','stats'].includes(h))UI.tab=h}catch(e){}
+
+/* ---------- calculs ---------- */
+function act(d=dkey()){return S.act[d]||(S.act[d]={focus:0,done:0})}
+function totalFocus(){return Object.values(S.act).reduce((a,x)=>a+(x.focus||0),0)}
+const STAGES=[[0,'🌰','Graine'],[25,'🌱','Pousse'],[120,'🌿','Jeune plante'],[300,'🪴','Plante en pot'],[600,'🌳','Arbre'],[1200,'🌸','Arbre en fleurs'],[2500,'🍎','Arbre fruitier']];
+function plant(){const t=totalFocus();let i=0;STAGES.forEach((s,j)=>{if(t>=s[0])i=j});const nx=STAGES[i+1];return {e:STAGES[i][1],n:STAGES[i][2],next:nx?nx[0]-t:0}}
+function streak(){let n=0;const d=new Date();const has=k=>{const a=S.act[k];return a&&(a.focus>0||a.done>0)};if(!has(dkey(d)))d.setDate(d.getDate()-1);while(has(dkey(d))){n++;d.setDate(d.getDate()-1)}return n}
+function estRatio(){const l=S.tasks.filter(t=>t.done&&t.est>0&&t.spent>0).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0)).slice(0,20);
+  if(!l.length)return {n:0,r:1};const r=l.reduce((a,t)=>a+Math.min(4,Math.max(.3,t.spent/t.est)),0)/l.length;return {n:l.length,r}}
+function todayPrios(){return S.tasks.filter(t=>t.today&&!t.done)}
+
+/* ---------- découpage hors-ligne (façon « Magic ToDo ») ---------- */
+const TPL=[
+  [/mail|relanc|répond|repond|message|écrire à|ecrire a/i,['Ouvrir le dernier échange','Noter en 1 ligne ce que je veux obtenir','Écrire un brouillon moche (2-3 phrases)','Relire une fois','Envoyer']],
+  [/factur|devis|compta|urssaf|impôt|impot|déclar|declar|banque/i,['Ouvrir l’outil ou le modèle','Rassembler les infos (heures, montants, références)','Remplir les champs obligatoires','Vérifier les totaux','Envoyer / enregistrer et archiver']],
+  [/appel|téléphon|telephon|rdv|rendez|réunion|reunion|visio|call/i,['Noter le but de l’échange en 1 phrase','Lister 3 points à aborder','Préparer le numéro ou le lien','Faire l’appel','Noter la suite à donner']],
+  [/maquette|design|logo|graph|\bui\b|figma|illustr|visuel/i,['Relire le brief (5 min)','Rassembler 3 références visuelles','Faire 3 croquis rapides, sans juger','Développer le meilleur','Exporter et envoyer pour retour']],
+  [/rédig|redig|écri|ecri|article|texte|blog|post|rapport|présentation|presentation/i,['Ouvrir un document vierge','Écrire le plan en 3 à 5 puces','Écrire un premier jet sans corriger','Relire et couper','Mettre en forme et envoyer']],
+  [/code|bug|dev|site|appli|api|déplo|deplo|feature/i,['Relire le besoin / reproduire le bug','Définir la plus petite étape testable','Coder cette étape','Tester','Commit / livrer et noter la suite']],
+  [/rang|ménage|menage|nettoy|tri|bureau|cuisine|linge|vaisselle/i,['Mettre un minuteur de 10 min','Jeter ce qui est évident','Ranger un seul coin','Remettre en place ce qui traîne','Admirer le résultat 😌']],
+  [/courses|achat|acheter|commander/i,['Lister ce qu’il faut','Vérifier ce que j’ai déjà','Choisir où acheter','Passer commande / y aller','Ranger les achats']]
+];
+const GEN=['Préparer : ouvrir ce dont j’ai besoin','Faire le tout premier petit pas (5 min)','Avancer sur le cœur de la tâche','Vérifier rapidement','Terminer : envoyer / ranger'];
+function breakdown(id){const t=S.tasks.find(x=>x.id===id);if(!t)return;const m=TPL.find(p=>p[0].test(t.title));const steps=m?m[1]:GEN;
+  let n=0;steps.forEach(s=>{if(!t.subs.some(x=>x.t===s)){t.subs.push({id:uid(),t:s,done:false});n++}});
+  save();toast(n?`Découpée en ${n} micro-étapes ✂️ Modifie-les à ta sauce.`:'Déjà découpée 👍')}
+
+function parseCapture(s){let client='',est=0;
+  s=s.replace(/@([^\s@]+)/,(m,c)=>{client=c.replace(/_/g,' ');return ' '});
+  s=s.replace(/(^|\s)(\d+(?:[.,]\d+)?)\s*(h|min|m)(?=\s|$)/i,(m,sp,n,u)=>{n=parseFloat(n.replace(',','.'));est=Math.round(u.toLowerCase()==='h'?n*60:n);return ' '});
+  return {title:s.replace(/\s+/g,' ').trim(),client,est}}
+function addTask(raw,extra){const p=parseCapture(raw);if(!p.title)return null;
+  const t=Object.assign({id:uid(),title:p.title,est:p.est,client:p.client,due:'',subs:[],done:false,today:false,spent:0,created:Date.now()},extra||{});
+  S.tasks.push(t);save();return t}
+
+/* ---------- vues ---------- */
+const V={};
+V.today=function(){
+  const pr=todayPrios();let slots='';
+  pr.forEach(t=>{const nx=t.subs.find(s=>!s.done);slots+=`<div class="task prio"><button class="chk" data-a="toggleDone" data-id="${t.id}" aria-label="Terminer"></button>
+    <div class="grow" data-a="openTaskGo" data-id="${t.id}"><div class="tt">${esc(t.title)}</div><div class="sm mut">${nx?'→ '+esc(nx.t):''}${t.est?(nx?' · ':'')+'⏱ '+fmtDur(t.est):''}</div></div>
+    <button class="play" data-a="focusTask" data-id="${t.id}" aria-label="Focus">▶</button></div>`});
+  for(let i=pr.length;i<3;i++)slots+=`<button class="slot" data-a="pickPrio">+ Choisir une priorité</button>`;
+  const p=plant();
+  return `${storageOK?'':'<div class="warn">⚠️ Le stockage est indisponible dans cet aperçu : tes données seront perdues à la fermeture. Installe l’appli pour les garder.</div>'}
+  <div class="row"><div class="grow"><div class="clock" id="clock"></div><div class="mut date" id="date"></div></div>
+  <div class="plantmini" data-a="tab" data-id="stats">${p.e}<small>${S.points} pts · ${streak()}🔥</small></div></div>
+  <div class="card"><div class="sm" id="dayleft"></div><div class="bar"><i id="daybar"></i></div><div id="nextblk" class="sm" style="margin-top:10px;line-height:1.5"></div></div>
+  <h2>Mes 3 priorités du jour</h2><div class="card">${slots}</div>
+  <button class="btn pri big" data-a="five">▶ Juste 5 minutes</button>
+  <button class="btn big" data-a="stuck">😵 Je bloque</button>
+  <div class="row" style="margin-top:18px"><h2 class="grow" style="margin:0">Ma journée</h2><button class="chip" data-a="autoPlan">⚡ Placer mes priorités</button><button class="chip" data-a="addBlock">+ Bloc</button></div>
+  <div class="card" style="padding:14px 8px 6px">${timeline()}</div>`;
+};
+function timeline(){
+  const d=dkey(),bl=S.blocks.filter(b=>b.d===d).sort((a,b)=>toMin(a.s)-toMin(b.s));
+  let s=toMin(S.settings.dayStart)-60,e=toMin(S.settings.dayEnd)+60;
+  bl.forEach(b=>{s=Math.min(s,toMin(b.s));e=Math.max(e,toMin(b.s)+b.m)});
+  s=Math.max(0,Math.floor(s/60)*60);e=Math.min(1440,Math.ceil(e/60)*60);
+  let h='';for(let m=s;m<e;m+=60)h+=`<div class="hour" style="height:${60*PX}px"><span>${pad(m/60)}:00</span></div>`;
+  // blocs qui se chevauchent : affichés côte à côte
+  const lay={};let grp=[],gEnd=-1;
+  const flush=()=>{const cols=[];grp.forEach(b=>{let c=cols.findIndex(e=>e<=toMin(b.s));if(c<0){c=cols.length;cols.push(0)}cols[c]=toMin(b.s)+Math.max(b.m,20);lay[b.id]={c}});grp.forEach(b=>lay[b.id].n=cols.length);grp=[]};
+  bl.forEach(b=>{const st=toMin(b.s);if(grp.length&&st>=gEnd){flush();gEnd=-1}grp.push(b);gEnd=Math.max(gEnd,st+Math.max(b.m,20))});flush();
+  bl.forEach(b=>{const top=(toMin(b.s)-s)*PX,ht=Math.max(24,Math.min(b.m,e-toMin(b.s))*PX),L=lay[b.id],w=`(100% - 50px) / ${L.n}`;
+    h+=`<div class="block ${b.done?'bdone':''}" data-a="blockMenu" data-id="${b.id}" style="top:${top}px;height:${ht-2}px;left:calc(46px + ${w} * ${L.c});right:auto;width:calc(${w} - 4px);background:${b.c||colorFor(b.t)}"><b>${b.done?'✓ ':''}${esc(b.t)}</b> <span>${b.s} · ${fmtDur(b.m)}</span></div>`});
+  h+=`<div class="now" id="nowline" data-s="${s}" data-e="${e}"></div>`;
+  return `<div class="timeline" style="height:${(e-s)*PX}px">${h}</div>`;
+}
+function liveToday(){
+  const c=$('#clock');if(!c)return;const d=new Date();
+  c.textContent=pad(d.getHours())+':'+pad(d.getMinutes());
+  $('#date').textContent=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  const ds=toMin(S.settings.dayStart),de=toMin(S.settings.dayEnd),n=nowMin();let txt,p;
+  if(n<ds){txt=`Ta journée de travail commence dans <b>${fmtDur(ds-n)}</b>`;p=0}
+  else if(n<de){txt=`Il reste <b>${fmtDur(de-n)}</b> de journée de travail`;p=(n-ds)/Math.max(1,de-ds)}
+  else{txt='Journée de travail terminée 🎉 Pense à décrocher.';p=1}
+  $('#dayleft').innerHTML=txt;$('#daybar').style.width=(p*100)+'%';
+  const bl=S.blocks.filter(b=>b.d===dkey()&&!b.done).sort((a,b)=>toMin(a.s)-toMin(b.s));
+  const cur=bl.find(b=>toMin(b.s)<=n&&n<toMin(b.s)+b.m),nx=bl.find(b=>toMin(b.s)>n);let s='';
+  if(cur)s+=`🟢 Maintenant : <b>${esc(cur.t)}</b> — encore ${fmtDur(toMin(cur.s)+cur.m-n)}<br>`;
+  if(nx)s+=`⏭ Ensuite : <b>${esc(nx.t)}</b> à ${nx.s} (dans ${fmtDur(toMin(nx.s)-n)})`;
+  $('#nextblk').innerHTML=s||'<span class="mut">Aucun bloc prévu. Ajoute-en un ou place tes priorités ⚡</span>';
+  const nl=$('#nowline');if(nl){const st=+nl.dataset.s,en=+nl.dataset.e;if(n<st||n>en)nl.style.display='none';else{nl.style.display='';nl.style.top=((n-st)*PX)+'px'}}
+}
+function dueLabel(due){const a=new Date(due+'T00:00:00'),b=new Date(dkey()+'T00:00:00');const n=Math.round((a-b)/864e5);
+  if(n<0)return `<span class="chip" style="color:var(--ac2)">⚠ en retard</span>`;
+  if(n===0)return `<span class="chip" style="color:var(--warn)">📅 aujourd’hui</span>`;
+  if(n===1)return `<span class="chip" style="color:var(--warn)">📅 demain</span>`;
+  return `<span class="chip">📅 dans ${n} j</span>`}
+function taskCard(t){
+  const open=UI.openTask===t.id,sd=t.subs.filter(s=>s.done).length,nx=t.subs.find(s=>!s.done);
+  let h=`<div class="card ${t.done?'isdone':''}"><div class="task"><button class="chk ${t.done?'done':''}" data-a="toggleDone" data-id="${t.id}" aria-label="Terminer"></button>
+  <div class="grow" data-a="openTask" data-id="${t.id}"><div class="tt">${t.today&&!t.done?'⭐ ':''}${esc(t.title)}</div>
+  <div class="meta">${t.est?`<span class="chip">⏱ ${fmtDur(t.est)}</span>`:''}${t.client?`<span class="chip" style="color:${colorFor(t.client)}">● ${esc(t.client)}</span>`:''}${t.due&&!t.done?dueLabel(t.due):''}${t.subs.length?`<span class="chip">✓ ${sd}/${t.subs.length}</span>`:''}${t.spent?`<span class="chip">🎯 ${fmtDur(t.spent)}</span>`:''}</div>
+  ${nx&&!open&&!t.done?`<div class="sm mut" style="margin-top:4px">→ ${esc(nx.t)}</div>`:''}</div>
+  ${t.done?'':`<button class="play" data-a="focusTask" data-id="${t.id}" aria-label="Focus">▶</button>`}</div>`;
+  if(open)h+=editor(t);return h+'</div>';
+}
+function editor(t){
+  const ests=[0,5,10,15,25,30,45,60,90,120,180,240];
+  return `<div class="editor">
+  <input data-f="title" data-id="${t.id}" value="${esc(t.title)}" aria-label="Titre">
+  <div class="grid2"><label>Durée estimée<select data-f="est" data-id="${t.id}">${ests.map(v=>`<option value="${v}" ${(+t.est===v)?'selected':''}>${v?fmtDur(v):'—'}</option>`).join('')}</select></label>
+  <label>Client / projet<input data-f="client" data-id="${t.id}" list="clients" value="${esc(t.client)}" placeholder="—"></label></div>
+  <label>Échéance<input type="date" data-f="due" data-id="${t.id}" value="${esc(t.due)}"></label>
+  <div class="sm mut" style="margin-top:10px">Micro-étapes</div>
+  ${t.subs.map(s=>`<div class="row sub"><button class="chk s ${s.done?'done':''}" data-a="toggleSub" data-id="${t.id}" data-s="${s.id}"></button><span class="grow ${s.done?'strike':''}">${esc(s.t)}</span><button class="x" data-a="delSub" data-id="${t.id}" data-s="${s.id}" aria-label="Supprimer">✕</button></div>`).join('')}
+  <div class="row" style="margin-top:6px"><input data-f="newsub" data-id="${t.id}" placeholder="Ajouter une micro-étape…" enterkeyhint="done"><button class="btn" data-a="addSub" data-id="${t.id}">+</button></div>
+  <div class="row wrap" style="margin-top:10px"><button class="btn" data-a="breakdown" data-id="${t.id}">✂️ Découper</button>
+  <button class="btn" data-a="toggleToday" data-id="${t.id}">${t.today?'☆ Retirer du jour':'⭐ Aujourd’hui'}</button>
+  <button class="btn danger" data-a="delTask" data-id="${t.id}">🗑</button></div></div>`;
+}
+V.tasks=function(){
+  const clients=[...new Set(S.tasks.map(t=>t.client).filter(Boolean))];
+  const f=UI.filter;let list=S.tasks.filter(t=>!t.done);
+  if(f==='today')list=list.filter(t=>t.today);else if(f.startsWith('c:'))list=list.filter(t=>t.client===f.slice(2));
+  list.sort((a,b)=>(b.today-a.today)||((a.due||'9999')<(b.due||'9999')?-1:(a.due||'9999')>(b.due||'9999')?1:0)||(a.created-b.created));
+  const done=S.tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const chip=(k,l)=>`<button class="chip ${f===k?'on':''}" data-a="filter" data-id="${esc(k)}">${esc(l)}</button>`;
+  return `<h1>Tâches</h1>
+  <div class="card"><div class="row"><input id="cap" placeholder="Vide ta tête ici…" enterkeyhint="done" autocomplete="off"><button class="btn pri" data-a="capture">+</button></div>
+  <div class="sm mut" style="margin-top:6px">Astuce : « Maquette logo @Dupont 45m » → client + durée remplis tout seuls.</div></div>
+  <datalist id="clients">${clients.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  <div class="chips">${chip('all','Tout')}${chip('today','⭐ Aujourd’hui')}${clients.map(c=>chip('c:'+c,c)).join('')}</div>
+  ${list.length?list.map(taskCard).join(''):'<p class="mut center" style="margin:30px 0">Rien ici. Tête vide = 🧘</p>'}
+  ${done.length?`<button class="chip" data-a="toggleShowDone" style="margin-top:12px">${UI.showDone?'▾':'▸'} Terminées (${done.length})</button>
+  ${UI.showDone?done.map(taskCard).join('')+'<button class="btn" data-a="clearDone">Vider les terminées</button>':''}`:''}`;
+};
+V.focus=function(){
+  const T=S.timer,task=S.tasks.find(t=>t.id===T.taskId),nx=task&&task.subs.find(s=>!s.done),brk=T.mode==='break';
+  const opts=S.tasks.filter(t=>!t.done).map(t=>`<option value="${t.id}" ${t.id===T.taskId?'selected':''}>${esc(t.title)}</option>`).join('');
+  let btns;
+  if(T.state==='run')btns=`<button class="btn" data-a="pauseT">⏸ Pause</button><button class="btn" data-a="plus5">+5 min</button><button class="btn" data-a="stopT">⏹ Arrêter</button>`;
+  else if(T.state==='pause')btns=`<button class="btn pri" data-a="resumeT">▶ Reprendre</button><button class="btn" data-a="stopT">⏹ Arrêter</button>`;
+  else btns=brk?`<button class="btn pri" data-a="resumeT">☕ Démarrer la pause</button><button class="btn" data-a="skipBreak">Passer</button>`:`<button class="btn pri" data-a="resumeT" style="padding:14px 34px;font-size:18px">▶ Démarrer</button>`;
+  const snd={off:'🔇 Silence',white:'Bruit blanc',pink:'Bruit rose',brown:'Bruit brun'};
+  return `<h1>${brk?'☕ Pause':'🎯 Focus'}</h1>
+  ${brk?'<p class="mut sm">Lève-toi, bouge, bois de l’eau. Évite les écrans si tu peux 😉</p>':`<select data-f="ftask" aria-label="Tâche"><option value="">— Sans tâche précise —</option>${opts}</select>`}
+  ${nx&&!brk?`<div class="card row"><button class="chk" data-a="toggleSub" data-id="${task.id}" data-s="${nx.id}"></button><div class="grow"><div class="sm mut">Prochaine micro-étape</div><b>${esc(nx.t)}</b></div></div>`:''}
+  <svg class="disk" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="98" fill="var(--card2)"/><path id="wedge" fill="${brk?'var(--ok)':'var(--ac2)'}"/><circle cx="100" cy="100" r="9" fill="var(--card)"/></svg>
+  <div class="bigtime" id="ttime"></div>
+  ${T.state==='idle'&&!brk?`<div class="chips center">${[5,15,25,45,60].map(m=>`<button class="chip ${T.total===m*60?'on':''}" data-a="setDur" data-id="${m}">${m} min</button>`).join('')}</div>`:''}
+  <div class="row center wrap" style="margin-top:8px">${btns}</div>
+  <h2>Ambiance sonore</h2><div class="chips">${Object.keys(snd).map(k=>`<button class="chip ${S.settings.sound===k?'on':''}" data-a="sound" data-id="${k}">${snd[k]}</button>`).join('')}</div>
+  <div class="card"><div class="sm mut">Une idée parasite ? Gare-la ici, elle ira dans tes tâches sans casser ton élan.</div>
+  <div class="row" style="margin-top:8px"><input id="park" placeholder="Ex : rappeler la banque" enterkeyhint="done" autocomplete="off"><button class="btn" data-a="park">Garer</button></div></div>
+  <div class="card sm">👥 <b>Body doubling</b> : travailler « avec » quelqu’un aide à démarrer et à tenir. Un appel visio silencieux avec un·e ami·e, ou des sessions avec binôme sur <a href="https://www.focusmate.com" target="_blank" rel="noopener">Focusmate</a>.</div>`;
+};
+V.routines=function(){
+  const d=dkey();
+  return `<h1>Routines</h1><p class="sm mut">Une étape à la fois, avec un minuteur. Moins de décisions = démarrage plus facile.</p>`+
+  S.routines.map(r=>{const done=(S.rdone[d]||{})[r.id],tot=r.steps.reduce((a,s)=>a+(+s.m||0),0);
+    return `<div class="card"><div class="row"><div class="grow"><b>${esc(r.name)}</b><div class="sm mut">${r.steps.length} étapes · ${fmtDur(tot)}${done?' · ✅ faite aujourd’hui':''}</div></div>
+    <button class="btn" data-a="editRoutine" data-id="${r.id}" aria-label="Modifier">✏️</button><button class="play" data-a="runRoutine" data-id="${r.id}" aria-label="Lancer">▶</button></div></div>`}).join('')+
+  `<button class="btn big" data-a="editRoutine" data-id="">+ Nouvelle routine</button>`;
+};
+V.stats=function(){
+  const p=plant(),a=act(),days=[];
+  for(let i=6;i>=0;i--){const dt=new Date();dt.setDate(dt.getDate()-i);const k=dkey(dt);days.push({k,l:dt.toLocaleDateString('fr-FR',{weekday:'short'}).replace('.',''),m:(S.act[k]||{}).focus||0})}
+  const mx=Math.max(30,...days.map(x=>x.m)),per={};
+  S.log.filter(l=>l.d>=days[0].k).forEach(l=>{const c=l.c||'Sans client';per[c]=(per[c]||0)+l.m});
+  const er=estRatio(),st=S.settings;
+  return `<h1>Bilan</h1>
+  <div class="card center"><div class="plant">${p.e}</div><b>${p.n}</b><div class="sm mut">${p.next?`Encore ${fmtDur(p.next)} de focus pour la prochaine étape`:'Niveau max, bravo !'}</div>
+  <div class="row center" style="margin-top:14px;gap:22px"><div><div class="num">${S.points}</div><div class="sm mut">points</div></div><div><div class="num">${streak()}🔥</div><div class="sm mut">jours d’affilée</div></div><div><div class="num">${fmtDur(a.focus)}</div><div class="sm mut">focus aujourd’hui</div></div></div></div>
+  <h2>Focus des 7 derniers jours</h2><div class="card"><div class="weekbars">${days.map(x=>`<div class="wb"><small>${x.m||''}</small><i style="height:${Math.round(x.m/mx*100)}%"></i><span>${x.l}</span></div>`).join('')}</div></div>
+  <h2>Temps par client (7 jours)</h2><div class="card">${Object.keys(per).length?Object.entries(per).sort((x,y)=>y[1]-x[1]).map(([c,m])=>`<div class="row" style="padding:4px 0"><span class="grow" style="color:${colorFor(c)}">● <span style="color:var(--tx)">${esc(c)}</span></span><b>${fmtDur(m)}</b></div>`).join(''):'<span class="sm mut">Lance un focus sur une tâche liée à un client pour suivre ton temps facturable.</span>'}</div>
+  <h2>Estimation vs réalité</h2><div class="card sm">${er.n>=3?`Sur tes ${er.n} dernières tâches, le temps réel a été en moyenne <b>×${er.r.toFixed(1).replace('.',',')}</b> ton estimation. « ⚡ Placer mes priorités » utilise ce coefficient pour prévoir assez de temps.`:'Termine des tâches avec une durée estimée et du temps de focus : l’appli calculera ton coefficient « estimation → réalité » (très utile contre la cécité temporelle).'}</div>
+  <h2>Réglages</h2><div class="card">
+  <div class="grid2"><label>Début de journée<input type="time" data-f="set:dayStart" value="${st.dayStart}"></label><label>Fin de journée<input type="time" data-f="set:dayEnd" value="${st.dayEnd}"></label>
+  <label>Bloc focus (min)<input type="number" inputmode="numeric" min="1" max="180" data-f="set:focus" value="${st.focus}"></label><label>Pause (min)<input type="number" inputmode="numeric" min="1" max="60" data-f="set:brk" value="${st.brk}"></label></div>
+  <label>Thème<select data-f="set:theme">${[['auto','Automatique'],['dark','Sombre'],['light','Clair']].map(([k,l])=>`<option value="${k}" ${st.theme===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  <label>Vibrations<select data-f="set:vib"><option value="1" ${st.vib?'selected':''}>Activées</option><option value="0" ${st.vib?'':'selected'}>Désactivées</option></select></label>
+  <button class="btn" data-a="notifPerm" style="margin-top:6px">🔔 Activer les notifications</button></div>
+  <h2>Sauvegarde</h2><div class="card"><p class="sm mut" style="margin-top:0">Tes données restent sur ce téléphone, sans compte. Exporte-les pour les garder ou les passer sur un autre appareil.</p>
+  <div class="row wrap"><button class="btn" data-a="exportData">⬇️ Exporter</button><button class="btn" data-a="importData">⬆️ Importer</button><button class="btn danger" data-a="resetAll">Tout effacer</button></div></div>
+  <h2>Installer l’appli</h2><div class="card sm" style="line-height:1.6"><b>iPhone</b> : ouvre la page dans Safari → bouton Partager → « Sur l’écran d’accueil ».<br><b>Android / Huawei</b> : menu du navigateur (⋮) → « Ajouter à l’écran d’accueil » ou « Installer l’application ».</div>
+  <p class="sm mut center">Élan · fonctionne hors-ligne une fois installée</p>`;
+};
+
+/* ---------- rendu ---------- */
+function render(){
+  document.documentElement.dataset.theme=S.settings.theme;
+  $('#main').innerHTML=V[UI.tab]();
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===UI.tab));
+  if(UI.tab==='today')liveToday();
+  drawTimer();
+}
+function go(tab){if(UI.tab!==tab){UI.tab=tab;window.scrollTo(0,0)}try{history.replaceState(null,'','#'+tab)}catch(e){}render()}
+
+/* ---------- feuilles, toasts, confettis ---------- */
+function sheet(html){closeSheet();const bg=document.createElement('div');bg.className='sheet-bg';bg.id='sheet';
+  bg.innerHTML=`<div class="sheet">${html}</div>`;bg.addEventListener('click',e=>{if(e.target===bg)closeSheet()});document.body.appendChild(bg);return bg}
+function closeSheet(){const s=$('#sheet');if(s)s.remove()}
+function toast(msg,actLabel,fn){const o=$('#toast');if(o)o.remove();const t=document.createElement('div');t.id='toast';t.className='toast';
+  t.innerHTML=esc(msg)+(actLabel?`<button class="tbtn">${esc(actLabel)}</button>`:'');
+  if(actLabel)t.querySelector('button').onclick=()=>{fn();t.remove()};document.body.appendChild(t);setTimeout(()=>t.remove(),actLabel?5000:2800)}
+function celebrate(){try{const c=document.createElement('canvas');c.className='confetti';document.body.appendChild(c);const dpr=window.devicePixelRatio||1;
+  const W=c.width=innerWidth*dpr,H=c.height=innerHeight*dpr,x=c.getContext('2d');
+  const P=Array.from({length:130},()=>({x:W/2,y:H*.45,vx:(Math.random()-.5)*W*.03,vy:-(Math.random()*H*.025+H*.006),s:(5+Math.random()*7)*dpr,c:COLORS[Math.random()*COLORS.length|0],r:Math.random()*6}));
+  const t0=performance.now();(function f(t){x.clearRect(0,0,W,H);P.forEach(p=>{p.vy+=H*.0009;p.x+=p.vx;p.y+=p.vy;p.r+=.2;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);x.restore()});
+  if(t-t0<2300)requestAnimationFrame(f);else c.remove()})(t0);}catch(e){} vibrate([30,40,30])}
+
+/* ---------- son, notifications, écran allumé ---------- */
+let AC=null,noise=null,WL=null;
+function ac(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC}catch(e){return null}}
+function startSound(){stopSound();const type=S.settings.sound;if(type==='off')return;const A=ac();if(!A)return;
+  try{const len=A.sampleRate*4,buf=A.createBuffer(1,len,A.sampleRate),d=buf.getChannelData(0);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0,last=0;
+  for(let i=0;i<len;i++){const w=Math.random()*2-1;
+    if(type==='white')d[i]=w*.35;
+    else if(type==='pink'){b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.1;b6=w*.115926}
+    else{last=(last+.02*w)/1.02;d[i]=last*3.2}}
+  const fade=A.sampleRate*.05;for(let i=0;i<fade;i++){d[i]*=i/fade;d[len-1-i]*=i/fade}
+  noise=A.createBufferSource();noise.buffer=buf;noise.loop=true;const g=A.createGain();g.gain.value=.5;noise.connect(g).connect(A.destination);noise.start()}catch(e){}}
+function stopSound(){try{if(noise)noise.stop()}catch(e){}noise=null}
+function chime(){const A=ac();if(!A)return;try{const t=A.currentTime;[660,880,1320].forEach((f,i)=>{const o=A.createOscillator(),g=A.createGain(),s=t+i*.18;o.type='sine';o.frequency.value=f;
+  g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.3,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.7);o.connect(g).connect(A.destination);o.start(s);o.stop(s+.75)})}catch(e){}}
+function notify(title,body){try{if(!('Notification' in window)||Notification.permission!=='granted')return;
+  if(navigator.serviceWorker&&navigator.serviceWorker.controller)navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,icon:'icons/icon-192.png',badge:'icons/icon-192.png',tag:'elan',vibrate:[200,100,200]})).catch(()=>{});
+  else new Notification(title,{body,icon:'icons/icon-192.png'})}catch(e){}}
+async function wake(on){try{if(on&&'wakeLock' in navigator&&!WL){WL=await navigator.wakeLock.request('screen');WL.addEventListener('release',()=>{WL=null})}else if(!on&&WL){await WL.release();WL=null}}catch(e){}}
+
+/* ---------- minuteur ---------- */
+let tickH=null;
+function ensureTick(){if(!tickH)tickH=setInterval(tick,250)}
+function tick(){const T=S.timer;if(T.state==='run'){T.left=Math.max(0,(T.endAt-Date.now())/1000);if(T.left<=0){finishT();return}}
+  drawTimer();if(T.state!=='run'&&tickH){clearInterval(tickH);tickH=null}}
+function wedgePath(f){if(f<=0.0005)return '';if(f>=.9995)return 'M100,2 A98,98 0 1,1 100,198 A98,98 0 1,1 100,2 Z';
+  const a=f*2*Math.PI,x=100+98*Math.sin(a),y=100-98*Math.cos(a);return `M100,100 L100,2 A98,98 0 ${f>.5?1:0},1 ${x.toFixed(2)},${y.toFixed(2)} Z`}
+function drawTimer(){const T=S.timer,w=$('#wedge'),tt=$('#ttime'),nt=$('#navtime');
+  if(w)w.setAttribute('d',wedgePath(T.total?T.left/T.total:0));if(tt)tt.textContent=fmtClock(T.left);
+  if(nt)nt.textContent=T.state==='idle'?'':(T.state==='pause'?'⏸ ':'')+fmtClock(T.left)}
+function startFocus(taskId,min){const T=S.timer;if(T.state!=='idle'){toast('Un bloc est déjà en cours');go('focus');return}
+  T.mode='focus';T.taskId=taskId||'';T.total=T.left=Math.round(min*60);closeSheet();UI.tab='focus';run()}
+function run(){const T=S.timer;T.state='run';T.endAt=Date.now()+T.left*1000;save();startSound();wake(true);ensureTick();go('focus')}
+function pauseT(){const T=S.timer;T.left=Math.max(0,(T.endAt-Date.now())/1000);T.state='pause';stopSound();wake(false);save();render()}
+function resetT(mode){const T=S.timer;T.state='idle';T.mode=mode||'focus';T.total=T.left=(T.mode==='focus'?S.settings.focus:S.settings.brk)*60;stopSound();wake(false);save()}
+function stopT(){const T=S.timer;if(T.state==='run')T.left=Math.max(0,(T.endAt-Date.now())/1000);const el=(T.total-T.left)/60;
+  if(T.mode==='focus'&&el>=1){const pts=logFocus(el,T.taskId,false);toast(`${fmtDur(el)} de focus comptées (+${pts} pts). Chaque minute compte 💪`)}
+  resetT('focus');render()}
+function logFocus(min,taskId,full){min=Math.round(min);const d=dkey();act(d).focus+=min;const t=S.tasks.find(x=>x.id===taskId);if(t)t.spent=(t.spent||0)+min;
+  S.log.push({d,c:t?t.client||'':'',m:min});const pts=min+(full?5:0);S.points+=pts;save();return pts}
+function finishT(){const T=S.timer;stopSound();wake(false);chime();vibrate([300,120,300,120,300]);
+  if(T.mode==='focus'){const tid=T.taskId,pts=logFocus(T.total/60,tid,true),task=S.tasks.find(x=>x.id===tid);
+    notify('Bloc terminé 🎉',`Bravo ! Pause de ${S.settings.brk} min ?`);resetT('break');T.taskId=tid;save();render();celebrate();
+    sheet(`<div class="center"><div style="font-size:52px">🎉</div><h3>Bloc terminé !</h3><p class="mut">+${pts} points · ${plant().e} ${plant().n}</p></div>
+    <button class="btn pri big" data-a="startBreak">☕ Pause de ${S.settings.brk} min</button><button class="btn big" data-a="again">🎯 Enchaîner un bloc</button>
+    ${task&&!task.done?`<button class="btn big" data-a="doneFromFocus" data-id="${task.id}">✓ J’ai fini la tâche</button>`:''}`)}
+  else{notify('Pause terminée','On repart pour un bloc ?');resetT('focus');render();toast('Pause terminée — prêt·e pour un nouveau bloc ?')}}
+
+/* ---------- routines (mode pas à pas) ---------- */
+let RR=null;
+function runRoutine(id){const r=S.routines.find(x=>x.id===id);if(!r||!r.steps.length){toast('Ajoute d’abord des étapes');return}RR={r,i:0};wake(true);buildRR()}
+function buildRR(){let o=$('#rr');if(!o){o=document.createElement('div');o.id='rr';o.className='overlay';document.body.appendChild(o)}
+  const s=RR.r.steps[RR.i];RR.total=Math.max(1,+s.m||1)*60;RR.endAt=Date.now()+RR.total*1000;RR.alerted=false;
+  o.innerHTML=`<div class="row"><div class="grow sm mut">${esc(RR.r.name)} · étape ${RR.i+1}/${RR.r.steps.length}</div><button class="btn" data-a="rrQuit">✕</button></div>
+  <div class="bar"><i style="width:${RR.i/RR.r.steps.length*100}%;background:var(--ok)"></i></div>
+  <div class="stepTxt">${esc(s.t)}</div><div class="bigtime" id="rrtime"></div><div class="bar" style="height:12px"><i id="rrbar"></i></div>
+  <div style="margin-top:auto"><button class="btn pri big" data-a="rrNext">✓ Fait</button><button class="btn big" data-a="rrNext" data-id="skip">Passer</button></div>`;
+  updRR();if(!RR.h)RR.h=setInterval(updRR,500)}
+function updRR(){if(!RR)return;const left=Math.max(0,(RR.endAt-Date.now())/1000),t=$('#rrtime'),b=$('#rrbar');
+  if(t)t.textContent=left>0?fmtClock(left):'⏰ Temps écoulé, pas grave !';if(b)b.style.width=(left/RR.total*100)+'%';
+  if(t&&left<=0)t.style.fontSize='22px';if(left<=0&&!RR.alerted){RR.alerted=true;chime();vibrate()}}
+function endRR(done){if(!RR)return;clearInterval(RR.h);const r=RR.r;RR=null;const o=$('#rr');if(o)o.remove();wake(false);
+  if(done){const d=dkey();(S.rdone[d]=S.rdone[d]||{})[r.id]=true;S.points+=5;act();save();render();celebrate();toast('Routine terminée ! +5 pts')}}
+function editRoutine(id){const r=S.routines.find(x=>x.id===id)||{id:'',name:'',steps:[]};
+  const row=s=>`<div class="row rstep" style="margin:6px 0"><input class="grow rs-t" value="${esc(s.t)}" placeholder="Étape"><input class="rs-m" type="number" inputmode="numeric" min="1" value="${s.m||1}" style="width:68px" aria-label="minutes"><button class="x" data-a="rsDel">✕</button></div>`;
+  sheet(`<h3>${r.id?'Modifier la routine':'Nouvelle routine'}</h3><input id="rname" value="${esc(r.name)}" placeholder="Nom (ex : 🏃 Avant le sport)">
+  <div class="sm mut" style="margin-top:10px">Étapes · minutes</div><div id="rsteps">${(r.steps.length?r.steps:[{t:'',m:2}]).map(row).join('')}</div>
+  <button class="btn" data-a="rsAdd">+ Étape</button><button class="btn pri big" data-a="rsSave" data-id="${r.id}">Enregistrer</button>${r.id?`<button class="btn danger big" data-a="rsRemove" data-id="${r.id}">Supprimer la routine</button>`:''}`);
+  RS_ROW=row}
+let RS_ROW=null;
+
+/* ---------- export / import ---------- */
+function exportData(){const json=JSON.stringify(S);
+  sheet(`<h3>Exporter mes données</h3><p class="sm mut">Copie ce texte (ou télécharge le fichier) et colle-le dans « Importer » sur l’autre appareil.</p>
+  <textarea id="exptxt" readonly>${esc(json)}</textarea><button class="btn pri big" data-a="copyExp">📋 Copier</button><button class="btn big" data-a="dlExp">⬇️ Télécharger le fichier</button>`)}
+function importData(){sheet(`<h3>Importer des données</h3><p class="sm mut">Colle un export ou choisis un fichier .json. ⚠️ Cela remplace les données actuelles.</p>
+  <textarea id="imptxt" placeholder="Colle ici…"></textarea><input type="file" id="impfile" accept=".json,application/json" style="margin-top:8px"><button class="btn pri big" data-a="doImport">Importer</button>`)}
+function doImport(txt){try{const o=JSON.parse(txt);if(!o||!Array.isArray(o.tasks))throw 0;const d=defaults();S=Object.assign(d,o);S.settings=Object.assign(defaults().settings,o.settings||{});S.timer=Object.assign(defaults().timer,o.timer||{},{state:'idle'});
+  save();closeSheet();render();toast('Données importées ✓')}catch(e){toast('Fichier ou texte invalide')}}
+
+/* ---------- actions ---------- */
+const A={
+  tab:id=>{closeSheet();go(id)},
+  pickPrio(){const c=S.tasks.filter(t=>!t.done&&!t.today);
+    sheet(`<h3>Choisir une priorité</h3>${c.length?c.map(t=>`<button class="pick" data-a="setPrio" data-id="${t.id}">${esc(t.title)} <span class="sm mut">${t.est?'· '+fmtDur(t.est):''}${t.client?' · '+esc(t.client):''}</span></button>`).join(''):'<p class="mut sm">Aucune tâche en attente.</p>'}
+    <div class="row" style="margin-top:10px"><input id="newprio" placeholder="Ou écris une nouvelle tâche…" enterkeyhint="done"><button class="btn pri" data-a="newPrio">+</button></div>`)},
+  setPrio(id){if(todayPrios().length>=3){toast('3 priorités max — c’est voulu 😉');return}const t=S.tasks.find(x=>x.id===id);if(t){t.today=true;save()}closeSheet();render()},
+  newPrio(){const i=$('#newprio');if(!i||!i.value.trim())return;if(todayPrios().length>=3){toast('3 priorités max — c’est voulu 😉');return}addTask(i.value,{today:true});closeSheet();render()},
+  five(){const t=todayPrios()[0];startFocus(t&&t.id,5)},
+  fiveOn:id=>startFocus(id,5),
+  stuck(){const c=S.tasks.filter(t=>!t.done),pr=c.filter(t=>t.today),pool=pr.length?pr:c;
+    const e=pool.slice().sort((a,b)=>(a.est||99)-(b.est||99))[0],st=e&&e.subs.find(s=>!s.done);
+    sheet(`<h3>😵 Pas de panique</h3><p class="sm mut">Bloquer, ce n’est pas de la paresse : le cerveau TDAH a du mal à <i>démarrer</i>. On rend la première marche ridiculement petite.</p>
+    ${e?`<div class="card" style="background:var(--card2)"><div class="sm mut">Le plus petit pas possible :</div><b>${esc(st?st.t:e.title)}</b>${st?`<div class="sm mut">(${esc(e.title)})</div>`:''}
+    <button class="btn pri big" data-a="fiveOn" data-id="${e.id}">▶ 5 minutes là-dessus, c’est tout</button>${e.subs.length?'':`<button class="btn big" data-a="breakdownGo" data-id="${e.id}">✂️ La découper d’abord</button>`}</div>`:''}
+    ${c.length>1?'<button class="btn big" data-a="randomTask">🎲 Choisis pour moi</button>':''}
+    <div class="sm" style="margin-top:12px"><b>Autres déclics</b><ul><li>Lève-toi, bois un verre d’eau, reviens (2 min).</li><li>Change de lieu : café, coworking, autre pièce.</li><li>Dis à voix haute la toute première action physique (« j’ouvre le fichier »).</li><li>Téléphone dans une autre pièce.</li><li>Travaille avec quelqu’un : visio silencieuse ou <a href="https://www.focusmate.com" target="_blank" rel="noopener">Focusmate</a>.</li><li>Lance la routine « Reset » dans l’onglet Routines.</li></ul></div>`)},
+  randomTask(){const c=S.tasks.filter(t=>!t.done);if(!c.length)return;const t=c[Math.random()*c.length|0];
+    sheet(`<div class="center"><div style="font-size:48px">🎲</div><p class="mut">Le sort a choisi :</p><h3>${esc(t.title)}</h3></div>
+    <button class="btn pri big" data-a="fiveOn" data-id="${t.id}">▶ 5 minutes</button><button class="btn big" data-a="focusTask" data-id="${t.id}">🎯 Un bloc complet</button><button class="btn big" data-a="randomTask">🎲 Relancer</button>`)},
+  breakdownGo(id){breakdown(id);closeSheet();UI.openTask=id;go('tasks')},
+  autoPlan(){const pr=todayPrios();if(!pr.length){toast('Choisis d’abord tes priorités ⭐');return}
+    const d=dkey(),er=estRatio(),k=er.n>=3?Math.min(3,Math.max(1,er.r)):1.5,day=()=>S.blocks.filter(b=>b.d===d);
+    let cur=Math.max(Math.ceil(nowMin()/15)*15,toMin(S.settings.dayStart)),n=0;
+    for(const t of pr){if(day().some(b=>b.taskId===t.id&&!b.done))continue;const dur=Math.max(15,Math.ceil((t.est||S.settings.focus)*k/15)*15);
+      for(let g=0;g<60;g++){const cl=day().find(b=>{const s=toMin(b.s),e=s+b.m;return cur<e&&cur+dur>s});if(!cl)break;cur=Math.ceil((toMin(cl.s)+cl.m)/15)*15}
+      if(cur+dur>1440)break;S.blocks.push({id:uid(),d,s:fromMin(cur),m:dur,t:t.title,taskId:t.id,c:colorFor(t.client||t.title)});cur+=dur+15;n++}
+    save();render();toast(n?`${n} bloc(s) placé(s), marge ×${k.toFixed(1).replace('.',',')} + pauses de 15 min`:'Tes priorités sont déjà planifiées')},
+  addBlock(){const n=Math.min(1425,Math.ceil(nowMin()/15)*15);
+    sheet(`<h3>Nouveau bloc</h3><label>Quoi ?<input id="bt" list="tasklist" placeholder="Ex : Appel client"></label>
+    <datalist id="tasklist">${S.tasks.filter(t=>!t.done).map(t=>`<option value="${esc(t.title)}">`).join('')}</datalist>
+    <div class="grid2"><label>Début<input type="time" id="bs" value="${fromMin(n)}"></label><label>Durée<select id="bm">${[15,30,45,60,90,120,180,240].map(v=>`<option value="${v}" ${v===60?'selected':''}>${fmtDur(v)}</option>`).join('')}</select></label></div>
+    <button class="btn pri big" data-a="saveBlock">Ajouter</button>`)},
+  saveBlock(){const t=($('#bt').value||'').trim()||'Bloc',task=S.tasks.find(x=>x.title===t&&!x.done);
+    S.blocks.push({id:uid(),d:dkey(),s:$('#bs').value||'09:00',m:+$('#bm').value||60,t,taskId:task?task.id:'',c:colorFor(task?(task.client||t):t)});save();closeSheet();render()},
+  blockMenu(id){const b=S.blocks.find(x=>x.id===id);if(!b)return;
+    sheet(`<h3>${esc(b.t)}</h3><p class="mut">${b.s} → ${fromMin(toMin(b.s)+b.m)} · ${fmtDur(b.m)}</p>
+    <button class="btn pri big" data-a="blockFocus" data-id="${id}">▶ Lancer le focus</button><button class="btn big" data-a="blockDone" data-id="${id}">${b.done?'↺ Pas encore fait':'✓ Fait'}</button>
+    <button class="btn big" data-a="blockShift" data-id="${id}">⏩ Décaler de 15 min</button><button class="btn danger big" data-a="blockDel" data-id="${id}">🗑 Supprimer</button>`)},
+  blockFocus(id){const b=S.blocks.find(x=>x.id===id);if(b)startFocus(b.taskId,Math.min(b.m,90))},
+  blockDone(id){const b=S.blocks.find(x=>x.id===id);if(b){b.done=!b.done;save()}closeSheet();render()},
+  blockShift(id){const b=S.blocks.find(x=>x.id===id);if(b&&toMin(b.s)+15<1440){b.s=fromMin(toMin(b.s)+15);save()}closeSheet();render()},
+  blockDel(id){S.blocks=S.blocks.filter(x=>x.id!==id);save();closeSheet();render()},
+  openTask(id){UI.openTask=UI.openTask===id?null:id;render()},
+  openTaskGo(id){UI.openTask=id;UI.filter='all';go('tasks')},
+  filter(id){UI.filter=id;render()},
+  toggleShowDone(){UI.showDone=!UI.showDone;render()},
+  clearDone(){S.tasks=S.tasks.filter(t=>!t.done);save();render()},
+  capture(){const i=$('#cap');if(!i||!i.value.trim())return;addTask(i.value);i.value='';render();const n=$('#cap');if(n)n.focus();toast('Ajoutée ✓')},
+  park(){const i=$('#park');if(!i||!i.value.trim())return;addTask(i.value);i.value='';toast('Garée dans Tâches ✓ Retour au focus !')},
+  toggleDone(id){const t=S.tasks.find(x=>x.id===id);if(!t)return;t.done=!t.done;
+    if(t.done){t.doneAt=Date.now();act().done++;S.points+=10;save();render();celebrate();toast('Tâche terminée ! +10 pts')}else{t.doneAt=0;const a=act();a.done=Math.max(0,a.done-1);S.points=Math.max(0,S.points-10);save();render()}},
+  doneFromFocus(id){closeSheet();A.toggleDone(id)},
+  toggleToday(id){const t=S.tasks.find(x=>x.id===id);if(!t)return;if(!t.today&&todayPrios().length>=3){toast('3 priorités max — c’est voulu 😉');return}t.today=!t.today;save();render()},
+  delTask(id){const i=S.tasks.findIndex(x=>x.id===id);if(i<0)return;const [t]=S.tasks.splice(i,1);save();render();toast('Tâche supprimée','Annuler',()=>{S.tasks.splice(i,0,t);save();render()})},
+  toggleSub(id,el){const t=S.tasks.find(x=>x.id===id),s=t&&t.subs.find(x=>x.id===el.dataset.s);if(!s)return;s.done=!s.done;
+    if(s.done){S.points+=2;vibrate([25]);if(t.subs.every(x=>x.done))toast('Toutes les étapes faites ! Coche la tâche 🎉')}save();render()},
+  delSub(id,el){const t=S.tasks.find(x=>x.id===id);if(!t)return;t.subs=t.subs.filter(x=>x.id!==el.dataset.s);save();render()},
+  addSub(id){const i=document.querySelector(`[data-f="newsub"][data-id="${id}"]`),t=S.tasks.find(x=>x.id===id);if(!i||!t||!i.value.trim())return;
+    t.subs.push({id:uid(),t:i.value.trim(),done:false});save();render();const n=document.querySelector(`[data-f="newsub"][data-id="${id}"]`);if(n)n.focus()},
+  breakdown(id){breakdown(id);render()},
+  focusTask(id){const t=S.tasks.find(x=>x.id===id),f=S.settings.focus;startFocus(id,t&&t.est&&t.est<f?t.est:f)},
+  setDur(m){const T=S.timer;T.total=T.left=(+m)*60;save();render()},
+  resumeT(){run()},
+  pauseT, stopT,
+  plus5(){const T=S.timer;T.total+=300;if(T.state==='run')T.endAt+=300000;else T.left+=300;save();drawTimer()},
+  skipBreak(){resetT('focus');render()},
+  startBreak(){closeSheet();const T=S.timer;T.mode='break';T.total=T.left=S.settings.brk*60;run()},
+  again(){closeSheet();const tid=S.timer.taskId;resetT('focus');S.timer.taskId=tid;run()},
+  sound(k){S.settings.sound=k;save();if(S.timer.state==='run')startSound();else if(k!=='off'){startSound();setTimeout(stopSound,1500)}render()},
+  runRoutine, editRoutine,
+  rrNext(){if(!RR)return;if(RR.i+1>=RR.r.steps.length)endRR(true);else{RR.i++;vibrate([25]);buildRR()}},
+  rrQuit(){endRR(false)},
+  rsAdd(){$('#rsteps').insertAdjacentHTML('beforeend',RS_ROW({t:'',m:2}));const l=document.querySelectorAll('.rs-t');l[l.length-1].focus()},
+  rsDel(_,el){el.closest('.rstep').remove()},
+  rsSave(id){const name=$('#rname').value.trim()||'Ma routine',steps=[...document.querySelectorAll('.rstep')].map(r=>({id:uid(),t:r.querySelector('.rs-t').value.trim(),m:Math.max(1,+r.querySelector('.rs-m').value||1)})).filter(s=>s.t);
+    const r=S.routines.find(x=>x.id===id);if(r){r.name=name;r.steps=steps}else S.routines.push({id:uid(),name,steps});save();closeSheet();render()},
+  rsRemove(id){S.routines=S.routines.filter(x=>x.id!==id);save();closeSheet();render()},
+  notifPerm(){if(!('Notification' in window)){toast('Notifications indisponibles ici. Sur iPhone, installe d’abord l’appli sur l’écran d’accueil.');return}
+    try{Notification.requestPermission().then(p=>toast(p==='granted'?'Notifications activées 🔔':'Notifications refusées')).catch(()=>toast('Notifications indisponibles ici'))}catch(e){toast('Notifications indisponibles ici')}},
+  exportData, importData,
+  copyExp(){const t=$('#exptxt');try{navigator.clipboard.writeText(t.value).then(()=>toast('Copié ✓'),()=>{t.select();toast('Sélectionné : copie-le manuellement')})}catch(e){t.select();toast('Sélectionné : copie-le manuellement')}},
+  dlExp(){try{const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='elan-sauvegarde-'+dkey()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}catch(e){toast('Téléchargement impossible ici : utilise Copier')}},
+  doImport(){const f=$('#impfile');if(f&&f.files&&f.files[0]){const r=new FileReader();r.onload=()=>doImport(r.result);r.readAsText(f.files[0])}else doImport($('#imptxt').value)},
+  resetAll(){sheet(`<h3>Tout effacer ?</h3><p class="mut">Tâches, routines, points… tout sera supprimé de ce téléphone. Pense à exporter avant.</p><button class="btn big" data-a="closeSheet">Annuler</button><button class="btn danger big" data-a="confirmReset">Oui, tout effacer</button>`)},
+  confirmReset(){try{localStorage.removeItem(KEY)}catch(e){}S=defaults();save();closeSheet();go('today')},
+  closeSheet
+};
+
+/* ---------- écouteurs ---------- */
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const fn=A[el.dataset.a];if(fn){e.preventDefault();fn(el.dataset.id,el,e)}});
+document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.target;
+  if(t.id==='cap'){e.preventDefault();A.capture()}else if(t.id==='park'){e.preventDefault();A.park()}else if(t.id==='newprio'){e.preventDefault();A.newPrio()}
+  else if(t.dataset&&t.dataset.f==='newsub'){e.preventDefault();A.addSub(t.dataset.id)}else if(t.dataset&&t.dataset.f==='title'){t.blur()}});
+document.addEventListener('change',e=>{const t=e.target,f=t.dataset&&t.dataset.f;if(!f)return;
+  if(f.startsWith('set:')){const k=f.slice(4);let v=t.value;if(k==='focus'||k==='brk')v=Math.min(k==='focus'?180:60,Math.max(1,parseInt(v)||1));if(k==='vib')v=v==='1';
+    S.settings[k]=v;if((k==='focus'||k==='brk')&&S.timer.state==='idle')resetT(S.timer.mode);save();if(k==='theme')document.documentElement.dataset.theme=v;return}
+  if(f==='ftask'){S.timer.taskId=t.value;save();render();return}
+  const task=S.tasks.find(x=>x.id===t.dataset.id);if(!task||f==='newsub')return;
+  if(f==='title'){if(t.value.trim())task.title=t.value.trim()}else if(f==='est')task.est=+t.value;else if(f==='client')task.client=t.value.trim();else if(f==='due')task.due=t.value;
+  S.blocks.forEach(b=>{if(b.taskId===task.id)b.t=task.title});save()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(S.timer.state==='run'){wake(true);tick()}liveToday()}});
+
+/* rappels doux des blocs : 5 min avant + au début */
+const notified=new Set();
+setInterval(()=>{liveToday();const n=nowMin();S.blocks.filter(b=>b.d===dkey()&&!b.done).forEach(b=>{const st=toMin(b.s);
+  if(n>=st-5&&n<st-4&&!notified.has(b.id+'p')){notified.add(b.id+'p');toast('⏳ Dans 5 min : '+b.t+' — commence à conclure');vibrate([80]);notify('Dans 5 minutes',b.t)}
+  if(n>=st&&n<st+1&&!notified.has(b.id)){notified.add(b.id);toast('⏰ C’est l’heure : '+b.t);vibrate();chime();notify('C’est l’heure ⏰',b.t)}})},15000);
+
+/* ---------- démarrage ---------- */
+if(S.timer.state==='run'){if(S.timer.endAt<=Date.now()){S.timer.left=0;render();finishT()}else{ensureTick();render()}}else render();
+try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
+})();
+</script>
+</body>
+</html>
