@@ -80,6 +80,8 @@ label input,label select{margin-top:4px}
 .num{font-size:22px;font-weight:800}
 .forest{font-size:26px;line-height:1.35;word-break:break-all}
 .sheet ol{padding-left:20px;line-height:1.55;margin:6px 0 10px}
+.daygrid{display:grid;grid-template-columns:36px minmax(0,1fr) minmax(0,1fr) 46px;gap:6px;align-items:center;margin-top:6px}
+.daygrid input[type=time]{padding:8px 4px;min-width:0;width:100%;font-size:15px}.daygrid>span:nth-child(4){text-align:center}.daygrid .off input[type=time]{opacity:.35}
 .warn{background:var(--warn);color:#000;border-radius:12px;padding:10px;font-size:13px;margin-bottom:10px}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:40}
 nav button{border:0;background:none;color:var(--mut);font-size:11px;padding:8px 0 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit;cursor:pointer}
@@ -174,6 +176,9 @@ function treeSVG(p,sp,dead){
   if(!dead&&g>.75&&(sp==='cerisier'||sp==='oranger')){const col=sp==='cerisier'?'#fff':'#ff9f43';
     h+=[[-.5,-.5],[.3,-.8],[.55,-.1],[-.2,.1],[-.75,.15],[.1,-.35],[.7,.35]].map(([x,y])=>`<circle cx="${100+x*fs}" cy="${top-fs*.2+y*fs}" r="${2+fs*.06}" fill="${col}"/>`).join('')}
   return h}
+const DAYS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],DAY_ORDER=[1,2,3,4,5,6,0];
+function ensureDays(){const st=S.settings;if(!Array.isArray(st.days)||st.days.length!==7)st.days=Array.from({length:7},()=>({s:st.dayStart||'09:00',e:st.dayEnd||'18:00',off:false}))}
+function dayHours(d=new Date()){ensureDays();const x=S.settings.days[d.getDay()];return {s:x.s||'09:00',e:x.e||'18:00',off:!!x.off}}
 function todayPrios(){return S.tasks.filter(t=>t.today&&!t.done)}
 
 /* ---------- découpage hors-ligne (façon « Magic ToDo ») ---------- */
@@ -221,7 +226,7 @@ V.today=function(){
 };
 function timeline(){
   const d=dkey(),bl=S.blocks.filter(b=>b.d===d).sort((a,b)=>toMin(a.s)-toMin(b.s));
-  let s=toMin(S.settings.dayStart)-60,e=toMin(S.settings.dayEnd)+60;
+  const dh=dayHours();let s=toMin(dh.s)-60,e=toMin(dh.e)+60;
   bl.forEach(b=>{s=Math.min(s,toMin(b.s));e=Math.max(e,toMin(b.s)+b.m)});
   s=Math.max(0,Math.floor(s/60)*60);e=Math.min(1440,Math.ceil(e/60)*60);
   let h='';for(let m=s;m<e;m+=60)h+=`<div class="hour" style="height:${60*PX}px"><span>${pad(m/60)}:00</span></div>`;
@@ -238,8 +243,9 @@ function liveToday(){
   const c=$('#clock');if(!c)return;const d=new Date();
   c.textContent=pad(d.getHours())+':'+pad(d.getMinutes());
   $('#date').textContent=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-  const ds=toMin(S.settings.dayStart),de=toMin(S.settings.dayEnd),n=nowMin();let txt,p;
-  if(n<ds){txt=`Ta journée de travail commence dans <b>${fmtDur(ds-n)}</b>`;p=0}
+  const dh=dayHours(),ds=toMin(dh.s),de=toMin(dh.e),n=nowMin();let txt,p;
+  if(dh.off){txt='Jour de repos 🌿 Pas de journée de travail prévue aujourd’hui.';p=0}
+  else if(n<ds){txt=`Ta journée de travail commence dans <b>${fmtDur(ds-n)}</b>`;p=0}
   else if(n<de){txt=`Il reste <b>${fmtDur(de-n)}</b> de journée de travail`;p=(n-ds)/Math.max(1,de-ds)}
   else{txt='Journée de travail terminée 🎉 Pense à décrocher.';p=1}
   $('#dayleft').innerHTML=txt;$('#daybar').style.width=(p*100)+'%';
@@ -360,7 +366,11 @@ V.stats=function(){
   <h2>Temps par client (7 jours)</h2><div class="card">${Object.keys(per).length?Object.entries(per).sort((x,y)=>y[1]-x[1]).map(([c,m])=>`<div class="row" style="padding:4px 0"><span class="grow" style="color:${colorFor(c)}">● <span style="color:var(--tx)">${esc(c)}</span></span><b>${fmtDur(m)}</b></div>`).join(''):'<span class="sm mut">Lance un focus sur une tâche liée à un client pour suivre ton temps facturable.</span>'}</div>
   <h2>Estimation vs réalité</h2><div class="card sm">${er.n>=3?`Sur tes ${er.n} dernières tâches, le temps réel a été en moyenne <b>×${er.r.toFixed(1).replace('.',',')}</b> ton estimation. « ⚡ Placer mes priorités » utilise ce coefficient pour prévoir assez de temps.`:'Termine des tâches avec une durée estimée et du temps de focus : l’appli calculera ton coefficient « estimation → réalité » (très utile contre la cécité temporelle).'}</div>
   <h2>Réglages</h2><div class="card">
-  <div class="grid2"><label>Début de journée<input type="time" data-f="set:dayStart" value="${st.dayStart}"></label><label>Fin de journée<input type="time" data-f="set:dayEnd" value="${st.dayEnd}"></label>
+  <div class="sm mut">Horaires de travail par jour</div>
+  <div class="daygrid"><span></span><span class="sm mut">Début</span><span class="sm mut">Fin</span><span class="sm mut">Repos</span>
+  ${(ensureDays(),DAY_ORDER.map(i=>{const x=st.days[i];return `<b class="sm">${DAYS[i]}</b><span class="${x.off?'off':''}"><input type="time" data-f="day:${i}:s" value="${x.s}" ${x.off?'disabled':''}></span><span class="${x.off?'off':''}"><input type="time" data-f="day:${i}:e" value="${x.e}" ${x.off?'disabled':''}></span><input type="checkbox" data-f="day:${i}:off" ${x.off?'checked':''} style="width:22px;height:22px;margin:0 auto">`}).join(''))}</div>
+  <button class="chip" data-a="copyMon" style="margin-top:8px">↳ Copier lundi sur mardi → vendredi</button>
+  <div class="grid2" style="margin-top:6px">
   <label>Bloc focus (min)<input type="number" inputmode="numeric" min="1" max="180" data-f="set:focus" value="${st.focus}"></label><label>Pause (min)<input type="number" inputmode="numeric" min="1" max="60" data-f="set:brk" value="${st.brk}"></label></div>
   <label>Thème<select data-f="set:theme">${[['auto','Automatique'],['dark','Sombre'],['light','Clair']].map(([k,l])=>`<option value="${k}" ${st.theme===k?'selected':''}>${l}</option>`).join('')}</select></label>
   <label>Arbre pendant le focus<select data-f="set:tree">${[['strict',NATIVE?'Strict : fane si je force une appli bloquée':'Strict : fane si je quitte Élan plus de 15 s'],['doux','Doux : ne fane jamais'],['off','Désactivé (minuteur disque)']].map(([k,l])=>`<option value="${k}" ${st.tree===k?'selected':''}>${l}</option>`).join('')}</select></label>
@@ -531,7 +541,7 @@ const A={
   breakdownGo(id){breakdown(id);closeSheet();UI.openTask=id;go('tasks')},
   autoPlan(){const pr=todayPrios();if(!pr.length){toast('Choisis d’abord tes priorités ⭐');return}
     const d=dkey(),er=estRatio(),k=er.n>=3?Math.min(3,Math.max(1,er.r)):1.5,day=()=>S.blocks.filter(b=>b.d===d);
-    let cur=Math.max(Math.ceil(nowMin()/15)*15,toMin(S.settings.dayStart)),n=0;
+    let cur=Math.max(Math.ceil(nowMin()/15)*15,toMin(dayHours().s)),n=0;
     for(const t of pr){if(day().some(b=>b.taskId===t.id&&!b.done))continue;const dur=Math.max(15,Math.ceil((t.est||S.settings.focus)*k/15)*15);
       for(let g=0;g<60;g++){const cl=day().find(b=>{const s=toMin(b.s),e=s+b.m;return cur<e&&cur+dur>s});if(!cl)break;cur=Math.ceil((toMin(cl.s)+cl.m)/15)*15}
       if(cur+dur>1440)break;S.blocks.push({id:uid(),d,s:fromMin(cur),m:dur,t:t.title,taskId:t.id,c:colorFor(t.client||t.title)});cur+=dur+15;n++}
@@ -600,6 +610,7 @@ const A={
   bmTab(id){UI.bm.tab=id;UI.bm.q='';blockManager()},
   bmToggle(pkg,el){const cfg=bmConf(),s=new Set(cfg[UI.bm.tab]||[]);if(s.has(pkg))s.delete(pkg);else s.add(pkg);
     NATIVE.setList(UI.bm.tab,JSON.stringify([...s]));const c=el.querySelector('.chk');if(c)c.classList.toggle('done',s.has(pkg));vibrate([15])},
+  copyMon(){ensureDays();const m=S.settings.days[1];[2,3,4,5].forEach(i=>{S.settings.days[i]={s:m.s,e:m.e,off:m.off}});save();render();toast('Horaires du lundi copiés sur mardi → vendredi')},
   runRoutine, editRoutine,
   rrNext(){if(!RR)return;if(RR.i+1>=RR.r.steps.length)endRR(true);else{RR.i++;vibrate([25]);buildRR()}},
   rrQuit(){endRR(false)},
@@ -628,6 +639,10 @@ document.addEventListener('input',e=>{if(e.target.id==='bmq'){UI.bm.q=e.target.v
 document.addEventListener('change',e=>{const t=e.target;if(t.id==='bmstrict'&&NATIVE){NATIVE.setStrict(t.checked);toast(t.checked?'Mode strict activé 🔒':'Mode strict désactivé');return}const f=t.dataset&&t.dataset.f;if(!f)return;
   if(f.startsWith('set:')){const k=f.slice(4);let v=t.value;if(k==='focus'||k==='brk')v=Math.min(k==='focus'?180:60,Math.max(1,parseInt(v)||1));if(k==='vib')v=v==='1';
     S.settings[k]=v;if((k==='focus'||k==='brk')&&S.timer.state==='idle')resetT(S.timer.mode);save();if(k==='theme')document.documentElement.dataset.theme=v;if(k==='tree'&&UI.tab==='focus')render();return}
+  if(f.startsWith('day:')){ensureDays();const [,i,k]=f.split(':'),d=S.settings.days[+i];
+    if(k==='off'){d.off=t.checked;save();render();return}
+    const prev=d[k];if(t.value)d[k]=t.value;if(toMin(d.e)<=toMin(d.s)){d[k]=prev;t.value=prev;toast('La fin doit être après le début')}
+    save();return}
   if(f==='ftask'){S.timer.taskId=t.value;save();render();return}
   const task=S.tasks.find(x=>x.id===t.dataset.id);if(!task||f==='newsub')return;
   if(f==='title'){if(t.value.trim())task.title=t.value.trim()}else if(f==='est')task.est=+t.value;else if(f==='client')task.client=t.value.trim();else if(f==='due')task.due=t.value;
