@@ -82,6 +82,8 @@ label input,label select{margin-top:4px}
 .sheet ol{padding-left:20px;line-height:1.55;margin:6px 0 10px}
 .daygrid{display:grid;grid-template-columns:36px minmax(0,1fr) minmax(0,1fr) 46px;gap:6px;align-items:center;margin-top:6px}
 .daygrid input[type=time]{padding:8px 4px;min-width:0;width:100%;font-size:15px}.daygrid>span:nth-child(4){text-align:center}.daygrid .off input[type=time]{opacity:.35}
+.daygrid .lr input[type=time]{padding:5px 4px;font-size:13px;background:transparent}.daygrid .lr{margin-bottom:6px}.daygrid .lrl{font-size:16px;text-align:center;margin-bottom:6px}.daygrid .lrc{margin-bottom:6px}
+.lunch{position:absolute;left:46px;right:4px;border-radius:10px;background:repeating-linear-gradient(45deg,rgba(255,181,71,.2) 0 6px,rgba(255,181,71,.07) 6px 12px);border:1px dashed var(--warn);color:var(--warn);font-size:12px;font-weight:600;padding:4px 8px;pointer-events:none;box-sizing:border-box}
 .warn{background:var(--warn);color:#000;border-radius:12px;padding:10px;font-size:13px;margin-bottom:10px}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:40}
 nav button{border:0;background:none;color:var(--mut);font-size:11px;padding:8px 0 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit;cursor:pointer}
@@ -177,8 +179,15 @@ function treeSVG(p,sp,dead){
     h+=[[-.5,-.5],[.3,-.8],[.55,-.1],[-.2,.1],[-.75,.15],[.1,-.35],[.7,.35]].map(([x,y])=>`<circle cx="${100+x*fs}" cy="${top-fs*.2+y*fs}" r="${2+fs*.06}" fill="${col}"/>`).join('')}
   return h}
 const DAYS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],DAY_ORDER=[1,2,3,4,5,6,0];
-function ensureDays(){const st=S.settings;if(!Array.isArray(st.days)||st.days.length!==7)st.days=Array.from({length:7},()=>({s:st.dayStart||'09:00',e:st.dayEnd||'18:00',off:false}))}
-function dayHours(d=new Date()){ensureDays();const x=S.settings.days[d.getDay()];return {s:x.s||'09:00',e:x.e||'18:00',off:!!x.off}}
+function ensureDays(){const st=S.settings;if(!Array.isArray(st.days)||st.days.length!==7)st.days=Array.from({length:7},()=>({s:st.dayStart||'09:00',e:st.dayEnd||'18:00',off:false}));
+  st.days.forEach(x=>{if(x.lunch===undefined){x.lunch=true;x.ls='12:00';x.le='13:00'}})}
+function dayHours(d=new Date()){ensureDays();const x=S.settings.days[d.getDay()];
+  const lunch=x.lunch&&x.ls&&x.le&&toMin(x.le)>toMin(x.ls)?{s:x.ls,e:x.le}:null;
+  return {s:x.s||'09:00',e:x.e||'18:00',off:!!x.off,lunch}}
+const overlap=(a,b,c,d)=>Math.max(0,Math.min(b,d)-Math.max(a,c));
+/* minutes de travail (hors pause midi) entre deux instants de la journée */
+function workMin(dh,from,to){const ds=toMin(dh.s),de=toMin(dh.e),a=Math.max(from,ds),b=Math.min(to,de);if(b<=a)return 0;
+  return (b-a)-(dh.lunch?overlap(a,b,toMin(dh.lunch.s),toMin(dh.lunch.e)):0)}
 function todayPrios(){return S.tasks.filter(t=>t.today&&!t.done)}
 
 /* ---------- découpage hors-ligne (façon « Magic ToDo ») ---------- */
@@ -230,6 +239,8 @@ function timeline(){
   bl.forEach(b=>{s=Math.min(s,toMin(b.s));e=Math.max(e,toMin(b.s)+b.m)});
   s=Math.max(0,Math.floor(s/60)*60);e=Math.min(1440,Math.ceil(e/60)*60);
   let h='';for(let m=s;m<e;m+=60)h+=`<div class="hour" style="height:${60*PX}px"><span>${pad(m/60)}:00</span></div>`;
+  if(!dh.off&&dh.lunch){const ls=toMin(dh.lunch.s),le=toMin(dh.lunch.e),a=Math.max(ls,s),z=Math.min(le,e);
+    if(z>a)h+=`<div class="lunch" style="top:${(a-s)*PX}px;height:${(z-a)*PX-2}px">🍽 Pause midi · ${dh.lunch.s}–${dh.lunch.e}</div>`}
   // blocs qui se chevauchent : affichés côte à côte
   const lay={};let grp=[],gEnd=-1;
   const flush=()=>{const cols=[];grp.forEach(b=>{let c=cols.findIndex(e=>e<=toMin(b.s));if(c<0){c=cols.length;cols.push(0)}cols[c]=toMin(b.s)+Math.max(b.m,20);lay[b.id]={c}});grp.forEach(b=>lay[b.id].n=cols.length);grp=[]};
@@ -246,7 +257,9 @@ function liveToday(){
   const dh=dayHours(),ds=toMin(dh.s),de=toMin(dh.e),n=nowMin();let txt,p;
   if(dh.off){txt='Jour de repos 🌿 Pas de journée de travail prévue aujourd’hui.';p=0}
   else if(n<ds){txt=`Ta journée de travail commence dans <b>${fmtDur(ds-n)}</b>`;p=0}
-  else if(n<de){txt=`Il reste <b>${fmtDur(de-n)}</b> de journée de travail`;p=(n-ds)/Math.max(1,de-ds)}
+  else if(n<de){const tot=Math.max(1,workMin(dh,ds,de)),left=workMin(dh,n,de),L=dh.lunch,ls=L&&toMin(L.s),le=L&&toMin(L.e);p=1-left/tot;
+    if(L&&n>=ls&&n<le)txt=`🍽 <b>Pause midi</b> — reprise à ${L.e} (dans ${fmtDur(le-n)}). Il restera <b>${fmtDur(left)}</b> de travail.`;
+    else{txt=`Il reste <b>${fmtDur(left)}</b> de travail${L&&n<ls?' (hors pause midi)':''}`;if(L&&n<ls&&ls-n<=60)txt+=`<br>🍽 Pause midi dans <b>${fmtDur(ls-n)}</b>`}}
   else{txt='Journée de travail terminée 🎉 Pense à décrocher.';p=1}
   $('#dayleft').innerHTML=txt;$('#daybar').style.width=(p*100)+'%';
   const bl=S.blocks.filter(b=>b.d===dkey()&&!b.done).sort((a,b)=>toMin(a.s)-toMin(b.s));
@@ -368,7 +381,9 @@ V.stats=function(){
   <h2>Réglages</h2><div class="card">
   <div class="sm mut">Horaires de travail par jour</div>
   <div class="daygrid"><span></span><span class="sm mut">Début</span><span class="sm mut">Fin</span><span class="sm mut">Repos</span>
-  ${(ensureDays(),DAY_ORDER.map(i=>{const x=st.days[i];return `<b class="sm">${DAYS[i]}</b><span class="${x.off?'off':''}"><input type="time" data-f="day:${i}:s" value="${x.s}" ${x.off?'disabled':''}></span><span class="${x.off?'off':''}"><input type="time" data-f="day:${i}:e" value="${x.e}" ${x.off?'disabled':''}></span><input type="checkbox" data-f="day:${i}:off" ${x.off?'checked':''} style="width:22px;height:22px;margin:0 auto">`}).join(''))}</div>
+  ${(ensureDays(),DAY_ORDER.map(i=>{const x=st.days[i];return `<b class="sm">${DAYS[i]}</b><span class="${x.off?'off':''}"><input type="time" data-f="day:${i}:s" value="${x.s}" ${x.off?'disabled':''}></span><span class="${x.off?'off':''}"><input type="time" data-f="day:${i}:e" value="${x.e}" ${x.off?'disabled':''}></span><input type="checkbox" data-f="day:${i}:off" ${x.off?'checked':''} style="width:22px;height:22px;margin:0 auto">
+    <span class="lrl" title="Pause midi">🍽</span><span class="lr ${x.off||!x.lunch?'off':''}"><input type="time" data-f="day:${i}:ls" value="${x.ls}" ${x.off||!x.lunch?'disabled':''} aria-label="Début pause midi ${DAYS[i]}"></span><span class="lr ${x.off||!x.lunch?'off':''}"><input type="time" data-f="day:${i}:le" value="${x.le}" ${x.off||!x.lunch?'disabled':''} aria-label="Fin pause midi ${DAYS[i]}"></span><input class="lrc" type="checkbox" data-f="day:${i}:lunch" ${x.lunch?'checked':''} ${x.off?'disabled':''} style="width:18px;height:18px;margin:0 auto 6px" aria-label="Pause midi ${DAYS[i]}">`}).join(''))}</div>
+  <div class="sm mut" style="margin-top:4px">🍽 = pause midi (décoche pour ne pas en avoir ce jour-là)</div>
   <button class="chip" data-a="copyMon" style="margin-top:8px">↳ Copier lundi sur mardi → vendredi</button>
   <div class="grid2" style="margin-top:6px">
   <label>Bloc focus (min)<input type="number" inputmode="numeric" min="1" max="180" data-f="set:focus" value="${st.focus}"></label><label>Pause (min)<input type="number" inputmode="numeric" min="1" max="60" data-f="set:brk" value="${st.brk}"></label></div>
@@ -540,9 +555,9 @@ const A={
     <button class="btn pri big" data-a="fiveOn" data-id="${t.id}">▶ 5 minutes</button><button class="btn big" data-a="focusTask" data-id="${t.id}">🎯 Un bloc complet</button><button class="btn big" data-a="randomTask">🎲 Relancer</button>`)},
   breakdownGo(id){breakdown(id);closeSheet();UI.openTask=id;go('tasks')},
   autoPlan(){const pr=todayPrios();if(!pr.length){toast('Choisis d’abord tes priorités ⭐');return}
-    const d=dkey(),er=estRatio(),k=er.n>=3?Math.min(3,Math.max(1,er.r)):1.5,day=()=>S.blocks.filter(b=>b.d===d);
+    const d=dkey(),er=estRatio(),k=er.n>=3?Math.min(3,Math.max(1,er.r)):1.5,lh=dayHours().lunch,day=()=>S.blocks.filter(b=>b.d===d).concat(lh?[{s:lh.s,m:toMin(lh.e)-toMin(lh.s),lunch:1}]:[]);
     let cur=Math.max(Math.ceil(nowMin()/15)*15,toMin(dayHours().s)),n=0;
-    for(const t of pr){if(day().some(b=>b.taskId===t.id&&!b.done))continue;const dur=Math.max(15,Math.ceil((t.est||S.settings.focus)*k/15)*15);
+    for(const t of pr){if(day().some(b=>b.taskId&&b.taskId===t.id&&!b.done))continue;const dur=Math.max(15,Math.ceil((t.est||S.settings.focus)*k/15)*15);
       for(let g=0;g<60;g++){const cl=day().find(b=>{const s=toMin(b.s),e=s+b.m;return cur<e&&cur+dur>s});if(!cl)break;cur=Math.ceil((toMin(cl.s)+cl.m)/15)*15}
       if(cur+dur>1440)break;S.blocks.push({id:uid(),d,s:fromMin(cur),m:dur,t:t.title,taskId:t.id,c:colorFor(t.client||t.title)});cur+=dur+15;n++}
     save();render();toast(n?`${n} bloc(s) placé(s), marge ×${k.toFixed(1).replace('.',',')} + pauses de 15 min`:'Tes priorités sont déjà planifiées')},
@@ -610,7 +625,7 @@ const A={
   bmTab(id){UI.bm.tab=id;UI.bm.q='';blockManager()},
   bmToggle(pkg,el){const cfg=bmConf(),s=new Set(cfg[UI.bm.tab]||[]);if(s.has(pkg))s.delete(pkg);else s.add(pkg);
     NATIVE.setList(UI.bm.tab,JSON.stringify([...s]));const c=el.querySelector('.chk');if(c)c.classList.toggle('done',s.has(pkg));vibrate([15])},
-  copyMon(){ensureDays();const m=S.settings.days[1];[2,3,4,5].forEach(i=>{S.settings.days[i]={s:m.s,e:m.e,off:m.off}});save();render();toast('Horaires du lundi copiés sur mardi → vendredi')},
+  copyMon(){ensureDays();const m=S.settings.days[1];[2,3,4,5].forEach(i=>{S.settings.days[i]=Object.assign({},m)});save();render();toast('Horaires du lundi copiés sur mardi → vendredi')},
   runRoutine, editRoutine,
   rrNext(){if(!RR)return;if(RR.i+1>=RR.r.steps.length)endRR(true);else{RR.i++;vibrate([25]);buildRR()}},
   rrQuit(){endRR(false)},
@@ -640,8 +655,10 @@ document.addEventListener('change',e=>{const t=e.target;if(t.id==='bmstrict'&&NA
   if(f.startsWith('set:')){const k=f.slice(4);let v=t.value;if(k==='focus'||k==='brk')v=Math.min(k==='focus'?180:60,Math.max(1,parseInt(v)||1));if(k==='vib')v=v==='1';
     S.settings[k]=v;if((k==='focus'||k==='brk')&&S.timer.state==='idle')resetT(S.timer.mode);save();if(k==='theme')document.documentElement.dataset.theme=v;if(k==='tree'&&UI.tab==='focus')render();return}
   if(f.startsWith('day:')){ensureDays();const [,i,k]=f.split(':'),d=S.settings.days[+i];
-    if(k==='off'){d.off=t.checked;save();render();return}
-    const prev=d[k];if(t.value)d[k]=t.value;if(toMin(d.e)<=toMin(d.s)){d[k]=prev;t.value=prev;toast('La fin doit être après le début')}
+    if(k==='off'||k==='lunch'){d[k]=t.checked;save();render();return}
+    const prev=d[k];if(t.value)d[k]=t.value;
+    if(toMin(d.e)<=toMin(d.s)||toMin(d.le)<=toMin(d.ls)){d[k]=prev;t.value=prev;toast('La fin doit être après le début');return}
+    if(k==='ls'||k==='le'){if(toMin(d.ls)<toMin(d.s)||toMin(d.le)>toMin(d.e))toast('Attention : la pause déborde de tes horaires')}
     save();return}
   if(f==='ftask'){S.timer.taskId=t.value;save();render();return}
   const task=S.tasks.find(x=>x.id===t.dataset.id);if(!task||f==='newsub')return;
@@ -654,7 +671,10 @@ document.addEventListener('visibilitychange',()=>{const T=S.timer;
 
 /* rappels doux des blocs : 5 min avant + au début */
 const notified=new Set();
-setInterval(()=>{liveToday();const n=nowMin();S.blocks.filter(b=>b.d===dkey()&&!b.done).forEach(b=>{const st=toMin(b.s);
+setInterval(()=>{liveToday();const n=nowMin();const dh=dayHours(),L=!dh.off&&dh.lunch,k=dkey();
+  if(L){const ls=toMin(L.s),le=toMin(L.e);
+    if(n>=ls&&n<ls+1&&!notified.has('l1'+k)){notified.add('l1'+k);toast('🍽 Pause midi ! Décroche, mange, bouge un peu.');vibrate();chime();notify('Pause midi 🍽','Décroche jusqu’à '+L.e)}
+    if(n>=le-5&&n<le-4&&!notified.has('l2'+k)){notified.add('l2'+k);toast('⏳ Reprise dans 5 min');vibrate([80]);notify('Reprise dans 5 minutes','Fin de la pause midi à '+L.e)}}S.blocks.filter(b=>b.d===dkey()&&!b.done).forEach(b=>{const st=toMin(b.s);
   if(n>=st-5&&n<st-4&&!notified.has(b.id+'p')){notified.add(b.id+'p');toast('⏳ Dans 5 min : '+b.t+' — commence à conclure');vibrate([80]);notify('Dans 5 minutes',b.t)}
   if(n>=st&&n<st+1&&!notified.has(b.id)){notified.add(b.id);toast('⏰ C’est l’heure : '+b.t);vibrate();chime();notify('C’est l’heure ⏰',b.t)}})},15000);
 
