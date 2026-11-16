@@ -78,6 +78,8 @@ label input,label select{margin-top:4px}
 .wb i{display:block;width:100%;background:var(--ac);border-radius:6px 6px 2px 2px;min-height:3px}
 .plant{font-size:72px;line-height:1.1}
 .num{font-size:22px;font-weight:800}
+.forest{font-size:26px;line-height:1.35;word-break:break-all}
+.sheet ol{padding-left:20px;line-height:1.55;margin:6px 0 10px}
 .warn{background:var(--warn);color:#000;border-radius:12px;padding:10px;font-size:13px;margin-bottom:10px}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom);z-index:40}
 nav button{border:0;background:none;color:var(--mut);font-size:11px;padding:8px 0 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:inherit;cursor:pointer}
@@ -126,9 +128,9 @@ function defaults(){
       {id:uid(),name:'🌙 Clôture de journée',steps:[st('Noter où j’en suis sur la tâche en cours',3),st('Choisir la 1ʳᵉ tâche de demain',2),st('Laisser le fichier ouvert, ranger le bureau',2),st('Vérifier mon temps par client',2)]},
       {id:uid(),name:'🧘 Reset quand je décroche',steps:[st('Me lever et m’étirer',2),st('Boire de l’eau',1),st('3 respirations lentes',1),st('Relire ma prochaine micro-étape',1)]}
     ],
-    rdone:{}, act:{}, log:[], points:0,
-    settings:{dayStart:'09:00',dayEnd:'18:00',focus:25,brk:5,theme:'auto',sound:'off',vib:true},
-    timer:{state:'idle',mode:'focus',total:1500,left:1500,endAt:0,taskId:''}
+    rdone:{}, act:{}, log:[], garden:[], points:0,
+    settings:{dayStart:'09:00',dayEnd:'18:00',focus:25,brk:5,theme:'auto',sound:'off',vib:true,tree:'strict',allowed:'Mail, Calendrier, Téléphone'},
+    timer:{state:'idle',mode:'focus',total:1500,left:1500,endAt:0,taskId:'',species:'',dead:false,plantedLeft:0,exceptUntil:0,exceptApp:'',hiddenAt:0}
   };
 }
 let storageOK=true;
@@ -138,7 +140,7 @@ let S=(function(){const d=defaults(),s=load();if(!s)return d;const m=Object.assi
 // ménage des vieilles données
 (function(){const lim=new Date();lim.setDate(lim.getDate()-14);const k=dkey(lim);S.blocks=S.blocks.filter(b=>b.d>=k);
   const lim2=new Date();lim2.setDate(lim2.getDate()-180);const k2=dkey(lim2);S.log=S.log.filter(l=>l.d>=k2);
-  Object.keys(S.rdone).forEach(d=>{if(d<k)delete S.rdone[d]});})();
+  Object.keys(S.rdone).forEach(d=>{if(d<k)delete S.rdone[d]});if(S.garden.length>2000)S.garden=S.garden.slice(-2000);})();
 
 let UI={tab:'today',openTask:null,filter:'all',showDone:false};
 try{const h=location.hash.slice(1);if(['today','tasks','focus','routines','stats'].includes(h))UI.tab=h}catch(e){}
@@ -151,6 +153,26 @@ function plant(){const t=totalFocus();let i=0;STAGES.forEach((s,j)=>{if(t>=s[0])
 function streak(){let n=0;const d=new Date();const has=k=>{const a=S.act[k];return a&&(a.focus>0||a.done>0)};if(!has(dkey(d)))d.setDate(d.getDate()-1);while(has(dkey(d))){n++;d.setDate(d.getDate()-1)}return n}
 function estRatio(){const l=S.tasks.filter(t=>t.done&&t.est>0&&t.spent>0).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0)).slice(0,20);
   if(!l.length)return {n:0,r:1};const r=l.reduce((a,t)=>a+Math.min(4,Math.max(.3,t.spent/t.est)),0)/l.length;return {n:l.length,r}}
+const GRACE=15, RING=2*Math.PI*92;
+const SPECIES=['chene','sapin','cerisier','oranger'],SPN={chene:'chêne',sapin:'sapin',cerisier:'cerisier',oranger:'oranger'};
+const pickSpecies=()=>SPECIES[Math.random()*SPECIES.length|0];
+const treeEmoji=g=>g.dead?'🥀':({chene:'🌳',sapin:'🌲',cerisier:'🌸',oranger:'🍊'}[g.sp]||'🌳');
+function treeSVG(p,sp,dead){
+  const g=p<.02?0:Math.pow(p,.8),base=150,tc=dead?'#8d6e63':'#7a5236';
+  let h=`<ellipse cx="100" cy="${base+3}" rx="56" ry="10" fill="${dead?'#a1887f':'#6d4c41'}" opacity=".55"/>`;
+  if(g<.04)return h+`<ellipse cx="100" cy="${base-1}" rx="7" ry="4.5" fill="#8d6e63"/>`;
+  const th=6+58*g,tw=2+7*g,top=base-th;
+  h+=`<rect x="${(100-tw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${tw.toFixed(1)}" height="${(th+2).toFixed(1)}" rx="${(tw/2).toFixed(1)}" fill="${tc}"/>`;
+  if(g<.18){const s=4+g*30,lc=dead?'#a1887f':'#3ecf8e',l=100-s*.6,r=100+s*.6;
+    return h+`<ellipse cx="${l}" cy="${top}" rx="${s*.7}" ry="${s*.35}" fill="${lc}" transform="rotate(-25 ${l} ${top})"/><ellipse cx="${r}" cy="${top}" rx="${s*.7}" ry="${s*.35}" fill="${lc}" transform="rotate(25 ${r} ${top})"/>`}
+  let fs=8+40*((g-.18)/.82);
+  const pal={chene:['#3ecf8e','#2fa874'],sapin:['#2e9e6a','#23825a'],cerisier:['#f48fb1','#ec6f9b'],oranger:['#43c47f','#33a86a']}[sp]||['#3ecf8e','#2fa874'];
+  const [c1,c2]=dead?['#bcaaa4','#a1887f']:pal;
+  if(sp==='sapin'){fs*=.85;let t='';for(let i=0;i<3;i++){const w=fs*(1.15-i*.25),y0=top+fs*.35-i*fs*.55,y1=y0-fs*.8;t+=`<polygon points="${100-w},${y0} ${100+w},${y0} 100,${y1}" fill="${i%2?c2:c1}"/>`}return h+t}
+  h+=`<circle cx="${100-fs*.62}" cy="${top+fs*.15}" r="${fs*.62}" fill="${c2}"/><circle cx="${100+fs*.62}" cy="${top+fs*.15}" r="${fs*.62}" fill="${c2}"/><circle cx="100" cy="${top-fs*.35}" r="${fs*.85}" fill="${c1}"/>`;
+  if(!dead&&g>.75&&(sp==='cerisier'||sp==='oranger')){const col=sp==='cerisier'?'#fff':'#ff9f43';
+    h+=[[-.5,-.5],[.3,-.8],[.55,-.1],[-.2,.1],[-.75,.15],[.1,-.35],[.7,.35]].map(([x,y])=>`<circle cx="${100+x*fs}" cy="${top-fs*.2+y*fs}" r="${2+fs*.06}" fill="${col}"/>`).join('')}
+  return h}
 function todayPrios(){return S.tasks.filter(t=>t.today&&!t.done)}
 
 /* ---------- découpage hors-ligne (façon « Magic ToDo ») ---------- */
@@ -272,23 +294,44 @@ V.tasks=function(){
   ${UI.showDone?done.map(taskCard).join('')+'<button class="btn" data-a="clearDone">Vider les terminées</button>':''}`:''}`;
 };
 V.focus=function(){
-  const T=S.timer,task=S.tasks.find(t=>t.id===T.taskId),nx=task&&task.subs.find(s=>!s.done),brk=T.mode==='break';
+  const T=S.timer,task=S.tasks.find(t=>t.id===T.taskId),nx=task&&task.subs.find(s=>!s.done),brk=T.mode==='break',mode=S.settings.tree,exc=T.exceptUntil>Date.now();
   const opts=S.tasks.filter(t=>!t.done).map(t=>`<option value="${t.id}" ${t.id===T.taskId?'selected':''}>${esc(t.title)}</option>`).join('');
   let btns;
   if(T.state==='run')btns=`<button class="btn" data-a="pauseT">⏸ Pause</button><button class="btn" data-a="plus5">+5 min</button><button class="btn" data-a="stopT">⏹ Arrêter</button>`;
   else if(T.state==='pause')btns=`<button class="btn pri" data-a="resumeT">▶ Reprendre</button><button class="btn" data-a="stopT">⏹ Arrêter</button>`;
-  else btns=brk?`<button class="btn pri" data-a="resumeT">☕ Démarrer la pause</button><button class="btn" data-a="skipBreak">Passer</button>`:`<button class="btn pri" data-a="resumeT" style="padding:14px 34px;font-size:18px">▶ Démarrer</button>`;
+  else btns=brk?`<button class="btn pri" data-a="resumeT">☕ Démarrer la pause</button><button class="btn" data-a="skipBreak">Passer</button>`:`<button class="btn pri" data-a="resumeT" style="padding:14px 34px;font-size:18px">${mode==='off'?'▶ Démarrer':'🌱 Planter et démarrer'}</button>`;
   const snd={off:'🔇 Silence',white:'Bruit blanc',pink:'Bruit rose',brown:'Bruit brun'};
+  const today=S.garden.filter(g=>g.d===dkey());
+  const vis=mode==='off'
+    ?`<svg class="disk" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="98" fill="var(--card2)"/><path id="wedge" fill="${brk?'var(--ok)':'var(--ac2)'}"/><circle cx="100" cy="100" r="9" fill="var(--card)"/></svg>`
+    :`<svg class="disk" viewBox="0 0 200 200" aria-hidden="true"><defs><clipPath id="cl"><circle cx="100" cy="100" r="84"/></clipPath></defs>
+      <circle cx="100" cy="100" r="92" fill="none" stroke="var(--card2)" stroke-width="8"/>
+      <circle id="ring" cx="100" cy="100" r="92" fill="none" stroke="${brk?'var(--ok)':(T.dead?'#a1887f':'var(--ac)')}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${RING.toFixed(1)}" transform="rotate(-90 100 100)"/>
+      <circle cx="100" cy="100" r="84" fill="${T.dead?'rgba(161,136,127,.18)':'rgba(62,207,142,.13)'}"/>
+      ${brk?'<text x="100" y="122" text-anchor="middle" font-size="64">☕</text>':'<g clip-path="url(#cl)" id="treeg"></g>'}</svg>`;
+  let msg='';
+  if(!brk&&mode!=='off'){
+    if(T.dead)msg='🥀 Ton arbre a fané… tes minutes comptent quand même.';
+    else if(T.state==='run')msg=mode==='strict'?`Ton ${SPN[T.species]||'arbre'} pousse. Si tu quittes Élan plus de ${GRACE} s, il fane.`:`Ton ${SPN[T.species]||'arbre'} pousse tranquillement 🌱`;
+    else if(T.state==='pause')msg='Ton arbre attend que tu reprennes 🌱';
+    else msg='Lance un bloc pour planter un arbre 🌱';
+  }
   return `<h1>${brk?'☕ Pause':'🎯 Focus'}</h1>
   ${brk?'<p class="mut sm">Lève-toi, bouge, bois de l’eau. Évite les écrans si tu peux 😉</p>':`<select data-f="ftask" aria-label="Tâche"><option value="">— Sans tâche précise —</option>${opts}</select>`}
   ${nx&&!brk?`<div class="card row"><button class="chk" data-a="toggleSub" data-id="${task.id}" data-s="${nx.id}"></button><div class="grow"><div class="sm mut">Prochaine micro-étape</div><b>${esc(nx.t)}</b></div></div>`:''}
-  <svg class="disk" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="98" fill="var(--card2)"/><path id="wedge" fill="${brk?'var(--ok)':'var(--ac2)'}"/><circle cx="100" cy="100" r="9" fill="var(--card)"/></svg>
+  ${vis}
   <div class="bigtime" id="ttime"></div>
+  ${msg?`<p class="center sm mut" style="margin:0 0 6px">${msg}</p>`:''}
+  ${T.dead&&T.state!=='idle'?'<button class="btn pri big" data-a="replant">🌱 Replanter un arbre</button>':''}
+  ${exc?`<div class="card sm row"><span class="grow">📱 Exception <b>${esc(T.exceptApp)}</b> · reviens dans <b id="exctime"></b></span><button class="chip" data-a="excEnd">Je suis revenu·e</button></div>`:''}
   ${T.state==='idle'&&!brk?`<div class="chips center">${[5,15,25,45,60].map(m=>`<button class="chip ${T.total===m*60?'on':''}" data-a="setDur" data-id="${m}">${m} min</button>`).join('')}</div>`:''}
   <div class="row center wrap" style="margin-top:8px">${btns}</div>
+  ${T.state==='run'&&!brk&&mode==='strict'&&!T.dead&&!exc?'<button class="btn big" data-a="excSheet">📱 J’ai besoin d’une autre appli</button>':''}
+  ${today.length?`<div class="card sm">Ta forêt aujourd’hui<div class="forest">${today.map(treeEmoji).join('')}</div></div>`:''}
   <h2>Ambiance sonore</h2><div class="chips">${Object.keys(snd).map(k=>`<button class="chip ${S.settings.sound===k?'on':''}" data-a="sound" data-id="${k}">${snd[k]}</button>`).join('')}</div>
   <div class="card"><div class="sm mut">Une idée parasite ? Gare-la ici, elle ira dans tes tâches sans casser ton élan.</div>
   <div class="row" style="margin-top:8px"><input id="park" placeholder="Ex : rappeler la banque" enterkeyhint="done" autocomplete="off"><button class="btn" data-a="park">Garer</button></div></div>
+  <button class="btn big" data-a="blockGuide">🛡️ Bloquer mes applis distrayantes</button>
   <div class="card sm">👥 <b>Body doubling</b> : travailler « avec » quelqu’un aide à démarrer et à tenir. Un appel visio silencieux avec un·e ami·e, ou des sessions avec binôme sur <a href="https://www.focusmate.com" target="_blank" rel="noopener">Focusmate</a>.</div>`;
 };
 V.routines=function(){
@@ -308,6 +351,9 @@ V.stats=function(){
   return `<h1>Bilan</h1>
   <div class="card center"><div class="plant">${p.e}</div><b>${p.n}</b><div class="sm mut">${p.next?`Encore ${fmtDur(p.next)} de focus pour la prochaine étape`:'Niveau max, bravo !'}</div>
   <div class="row center" style="margin-top:14px;gap:22px"><div><div class="num">${S.points}</div><div class="sm mut">points</div></div><div><div class="num">${streak()}🔥</div><div class="sm mut">jours d’affilée</div></div><div><div class="num">${fmtDur(a.focus)}</div><div class="sm mut">focus aujourd’hui</div></div></div></div>
+  <h2>Ma forêt (7 jours)</h2><div class="card">${(()=>{const wk=S.garden.filter(g=>g.d>=days[0].k),al=wk.filter(g=>!g.dead).length;
+    return wk.length?`<div class="forest">${wk.map(treeEmoji).join('')}</div><div class="sm mut">${al} arbre(s) planté(s)${wk.length-al?` · ${wk.length-al} fané(s)`:''} · ${S.garden.filter(g=>!g.dead).length} au total</div>`:'<span class="sm mut">Termine un bloc de focus pour planter ton premier arbre 🌱</span>'})()}
+  <button class="btn" data-a="blockGuide" style="margin-top:10px;display:block">🛡️ Bloquer mes applis distrayantes</button></div>
   <h2>Focus des 7 derniers jours</h2><div class="card"><div class="weekbars">${days.map(x=>`<div class="wb"><small>${x.m||''}</small><i style="height:${Math.round(x.m/mx*100)}%"></i><span>${x.l}</span></div>`).join('')}</div></div>
   <h2>Temps par client (7 jours)</h2><div class="card">${Object.keys(per).length?Object.entries(per).sort((x,y)=>y[1]-x[1]).map(([c,m])=>`<div class="row" style="padding:4px 0"><span class="grow" style="color:${colorFor(c)}">● <span style="color:var(--tx)">${esc(c)}</span></span><b>${fmtDur(m)}</b></div>`).join(''):'<span class="sm mut">Lance un focus sur une tâche liée à un client pour suivre ton temps facturable.</span>'}</div>
   <h2>Estimation vs réalité</h2><div class="card sm">${er.n>=3?`Sur tes ${er.n} dernières tâches, le temps réel a été en moyenne <b>×${er.r.toFixed(1).replace('.',',')}</b> ton estimation. « ⚡ Placer mes priorités » utilise ce coefficient pour prévoir assez de temps.`:'Termine des tâches avec une durée estimée et du temps de focus : l’appli calculera ton coefficient « estimation → réalité » (très utile contre la cécité temporelle).'}</div>
@@ -315,6 +361,8 @@ V.stats=function(){
   <div class="grid2"><label>Début de journée<input type="time" data-f="set:dayStart" value="${st.dayStart}"></label><label>Fin de journée<input type="time" data-f="set:dayEnd" value="${st.dayEnd}"></label>
   <label>Bloc focus (min)<input type="number" inputmode="numeric" min="1" max="180" data-f="set:focus" value="${st.focus}"></label><label>Pause (min)<input type="number" inputmode="numeric" min="1" max="60" data-f="set:brk" value="${st.brk}"></label></div>
   <label>Thème<select data-f="set:theme">${[['auto','Automatique'],['dark','Sombre'],['light','Clair']].map(([k,l])=>`<option value="${k}" ${st.theme===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  <label>Arbre pendant le focus<select data-f="set:tree">${[['strict','Strict : fane si je quitte Élan plus de 15 s'],['doux','Doux : ne fane jamais'],['off','Désactivé (minuteur disque)']].map(([k,l])=>`<option value="${k}" ${st.tree===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  <label>Applis autorisées pendant le focus (séparées par des virgules)<input data-f="set:allowed" value="${esc(st.allowed)}" placeholder="Mail, Figma, Calculatrice"></label>
   <label>Vibrations<select data-f="set:vib"><option value="1" ${st.vib?'selected':''}>Activées</option><option value="0" ${st.vib?'':'selected'}>Désactivées</option></select></label>
   <button class="btn" data-a="notifPerm" style="margin-top:6px">🔔 Activer les notifications</button></div>
   <h2>Sauvegarde</h2><div class="card"><p class="sm mut" style="margin-top:0">Tes données restent sur ce téléphone, sans compte. Exporte-les pour les garder ou les passer sur un autre appareil.</p>
@@ -372,27 +420,41 @@ function tick(){const T=S.timer;if(T.state==='run'){T.left=Math.max(0,(T.endAt-D
   drawTimer();if(T.state!=='run'&&tickH){clearInterval(tickH);tickH=null}}
 function wedgePath(f){if(f<=0.0005)return '';if(f>=.9995)return 'M100,2 A98,98 0 1,1 100,198 A98,98 0 1,1 100,2 Z';
   const a=f*2*Math.PI,x=100+98*Math.sin(a),y=100-98*Math.cos(a);return `M100,100 L100,2 A98,98 0 ${f>.5?1:0},1 ${x.toFixed(2)},${y.toFixed(2)} Z`}
-function drawTimer(){const T=S.timer,w=$('#wedge'),tt=$('#ttime'),nt=$('#navtime');
+function drawTimer(){const T=S.timer,w=$('#wedge'),tt=$('#ttime'),nt=$('#navtime'),rg=$('#ring'),tg=$('#treeg'),ex=$('#exctime');
+  if(rg)rg.setAttribute('stroke-dashoffset',(RING*(1-(T.total?T.left/T.total:0))).toFixed(1));
+  if(tg){const pl=T.plantedLeft||T.total,p=T.state==='idle'?0:Math.min(1,Math.max(0,(pl-T.left)/pl)),k=Math.round(p*300)+'|'+T.species+'|'+T.dead;
+    if(tg.dataset.k!==k){tg.dataset.k=k;tg.innerHTML=treeSVG(p,T.species||'chene',T.dead)}}
+  if(T.exceptUntil){const r=(T.exceptUntil-Date.now())/1000;if(r<=0){T.exceptUntil=0;save();if(UI.tab==='focus')render();return}if(ex)ex.textContent=fmtClock(r)}
   if(w)w.setAttribute('d',wedgePath(T.total?T.left/T.total:0));if(tt)tt.textContent=fmtClock(T.left);
   if(nt)nt.textContent=T.state==='idle'?'':(T.state==='pause'?'⏸ ':'')+fmtClock(T.left)}
 function startFocus(taskId,min){const T=S.timer;if(T.state!=='idle'){toast('Un bloc est déjà en cours');go('focus');return}
   T.mode='focus';T.taskId=taskId||'';T.total=T.left=Math.round(min*60);closeSheet();UI.tab='focus';run()}
-function run(){const T=S.timer;T.state='run';T.endAt=Date.now()+T.left*1000;save();startSound();wake(true);ensureTick();go('focus')}
+function run(){const T=S.timer;if(T.state==='idle'&&T.mode==='focus'){T.species=pickSpecies();T.dead=false;T.plantedLeft=T.left;T.exceptUntil=0;T.hiddenAt=0}T.state='run';T.endAt=Date.now()+T.left*1000;save();startSound();wake(true);ensureTick();go('focus')}
 function pauseT(){const T=S.timer;T.left=Math.max(0,(T.endAt-Date.now())/1000);T.state='pause';stopSound();wake(false);save();render()}
-function resetT(mode){const T=S.timer;T.state='idle';T.mode=mode||'focus';T.total=T.left=(T.mode==='focus'?S.settings.focus:S.settings.brk)*60;stopSound();wake(false);save()}
+function resetT(mode){const T=S.timer;T.state='idle';T.dead=false;T.exceptUntil=0;T.hiddenAt=0;T.plantedLeft=0;T.mode=mode||'focus';T.total=T.left=(T.mode==='focus'?S.settings.focus:S.settings.brk)*60;stopSound();wake(false);save()}
 function stopT(){const T=S.timer;if(T.state==='run')T.left=Math.max(0,(T.endAt-Date.now())/1000);const el=(T.total-T.left)/60;
-  if(T.mode==='focus'&&el>=1){const pts=logFocus(el,T.taskId,false);toast(`${fmtDur(el)} de focus comptées (+${pts} pts). Chaque minute compte 💪`)}
+  if(T.mode==='focus'&&el>=1){const pts=logFocus(el,T.taskId,false);toast(`${fmtDur(el)} de focus comptées (+${pts} pts)${S.settings.tree!=='off'&&!T.dead?' — pas d’arbre cette fois, mais':'.'} chaque minute compte 💪`)}
   resetT('focus');render()}
 function logFocus(min,taskId,full){min=Math.round(min);const d=dkey();act(d).focus+=min;const t=S.tasks.find(x=>x.id===taskId);if(t)t.spent=(t.spent||0)+min;
   S.log.push({d,c:t?t.client||'':'',m:min});const pts=min+(full?5:0);S.points+=pts;save();return pts}
 function finishT(){const T=S.timer;stopSound();wake(false);chime();vibrate([300,120,300,120,300]);
-  if(T.mode==='focus'){const tid=T.taskId,pts=logFocus(T.total/60,tid,true),task=S.tasks.find(x=>x.id===tid);
+  if(T.mode==='focus'){const tid=T.taskId,pts=logFocus(T.total/60,tid,true),task=S.tasks.find(x=>x.id===tid),grew=S.settings.tree!=='off'&&!T.dead,sp=T.species||'chene';
+    if(grew)S.garden.push({d:dkey(),sp,min:Math.round(T.total/60),dead:false});
     notify('Bloc terminé 🎉',`Bravo ! Pause de ${S.settings.brk} min ?`);resetT('break');T.taskId=tid;save();render();celebrate();
-    sheet(`<div class="center"><div style="font-size:52px">🎉</div><h3>Bloc terminé !</h3><p class="mut">+${pts} points · ${plant().e} ${plant().n}</p></div>
+    sheet(`<div class="center"><div style="font-size:52px">🎉</div><h3>Bloc terminé !</h3><p class="mut">+${pts} points${grew?` · ${treeEmoji({sp})} un ${SPN[sp]} rejoint ta forêt`:''}</p></div>
     <button class="btn pri big" data-a="startBreak">☕ Pause de ${S.settings.brk} min</button><button class="btn big" data-a="again">🎯 Enchaîner un bloc</button>
     ${task&&!task.done?`<button class="btn big" data-a="doneFromFocus" data-id="${task.id}">✓ J’ai fini la tâche</button>`:''}`)}
   else{notify('Pause terminée','On repart pour un bloc ?');resetT('focus');render();toast('Pause terminée — prêt·e pour un nouveau bloc ?')}}
 
+function checkTree(){const T=S.timer;if(!T.hiddenAt)return;const h=T.hiddenAt;T.hiddenAt=0;
+  if(T.state!=='run'||T.mode!=='focus'||T.dead||S.settings.tree!=='strict'){save();return}
+  const deadline=Math.max(h,T.exceptUntil||0)+GRACE*1000,until=Math.min(Date.now(),T.endAt);
+  if(until>deadline)killTree((Date.now()-h)/1000);else save()}
+function killTree(away){const T=S.timer;T.dead=true;T.exceptUntil=0;const left=Math.max(0,(T.endAt-Date.now())/1000);
+  S.garden.push({d:dkey(),sp:T.species||'chene',min:Math.round(((T.plantedLeft||T.total)-left)/60),dead:true});save();render();vibrate([400]);
+  sheet(`<div class="center"><div style="font-size:52px">🥀</div><h3>Ton arbre a fané</h3><p class="mut sm">Tu as quitté Élan pendant ${away<90?Math.round(away)+' s':fmtDur(away/60)}. Le minuteur a continué et tes minutes de focus comptent quand même.</p></div>
+  <button class="btn pri big" data-a="replant">🌱 Replanter et continuer</button><button class="btn big" data-a="closeSheet">Continuer sans arbre</button>
+  <p class="sm mut center">Besoin d’une autre appli ? Utilise « 📱 J’ai besoin d’une autre appli » avant de sortir.</p>`)}
 /* ---------- routines (mode pas à pas) ---------- */
 let RR=null;
 function runRoutine(id){const r=S.routines.find(x=>x.id===id);if(!r||!r.steps.length){toast('Ajoute d’abord des étapes');return}RR={r,i:0};wake(true);buildRR()}
@@ -490,11 +552,28 @@ const A={
   setDur(m){const T=S.timer;T.total=T.left=(+m)*60;save();render()},
   resumeT(){run()},
   pauseT, stopT,
-  plus5(){const T=S.timer;T.total+=300;if(T.state==='run')T.endAt+=300000;else T.left+=300;save();drawTimer()},
+  plus5(){const T=S.timer;T.total+=300;if(T.plantedLeft)T.plantedLeft+=300;if(T.state==='run')T.endAt+=300000;else T.left+=300;save();drawTimer()},
   skipBreak(){resetT('focus');render()},
   startBreak(){closeSheet();const T=S.timer;T.mode='break';T.total=T.left=S.settings.brk*60;run()},
   again(){closeSheet();const tid=S.timer.taskId;resetT('focus');S.timer.taskId=tid;run()},
   sound(k){S.settings.sound=k;save();if(S.timer.state==='run')startSound();else if(k!=='off'){startSound();setTimeout(stopSound,1500)}render()},
+  replant(){const T=S.timer;closeSheet();if(T.state==='idle')return;T.dead=false;T.species=pickSpecies();T.plantedLeft=Math.max(1,T.state==='run'?(T.endAt-Date.now())/1000:T.left);save();render();toast('🌱 Nouvel arbre planté. Courage !')},
+  excSheet(){const apps=S.settings.allowed.split(',').map(s=>s.trim()).filter(Boolean).concat('Autre');UI.excApp=apps[0];
+    sheet(`<h3>📱 Utiliser une autre appli</h3><p class="sm mut">Choisis l’appli autorisée et la durée. Pendant ce temps, ton arbre ne fanera pas.</p>
+    <div class="chips" id="excApps">${apps.map((a,i)=>`<button class="chip ${i?'':'on'}" data-a="excPick" data-id="${esc(a)}">${esc(a)}</button>`).join('')}</div>
+    <div class="row wrap" style="margin-top:8px">${[1,2,5,10].map(m=>`<button class="btn" data-a="excGo" data-id="${m}">${m} min</button>`).join('')}</div>
+    <p class="sm mut">Modifier la liste : Bilan → Réglages → Applis autorisées.</p>`)},
+  excPick(id,el){document.querySelectorAll('#excApps .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');UI.excApp=id},
+  excGo(m){const T=S.timer;T.exceptUntil=Date.now()+(+m)*60000;T.exceptApp=UI.excApp||'Autre';save();closeSheet();render();toast(`Exception ${T.exceptApp} : ${m} min. À tout de suite !`)},
+  excEnd(){S.timer.exceptUntil=0;save();render()},
+  blockGuide(){sheet(`<h3>🛡️ Bloquer les applis distrayantes</h3>
+    <p class="sm mut">Une web app n’a pas le droit de bloquer d’autres applis (iOS et Android l’interdisent). Ton téléphone sait le faire lui-même, gratuitement : à régler une seule fois.</p>
+    <div class="card" style="background:var(--card2)"><b>iPhone · blocage permanent (façon AppBlock)</b><ol class="sm">
+    <li>Réglages → Temps d’écran → Limites d’app → Ajouter une limite.</li><li>Choisis les applis (réseaux sociaux, jeux…), mets 1 min et active « Bloquer à la fin de la limite ».</li><li>Mets un code Temps d’écran, idéalement choisi par quelqu’un d’autre, pour ne pas craquer.</li></ol>
+    <b>iPhone · tout bloquer sauf exceptions</b><ol class="sm"><li>Temps d’écran → Temps d’arrêt : planifie tes heures de travail.</li><li>Temps d’écran → Toujours autorisées : ajoute tes applis de travail (et Safari si Élan se retrouve bloqué).</li></ol>
+    <b>iPhone · astuce « redirection »</b><ol class="sm"><li>App Raccourcis → Automatisation → + → App.</li><li>Choisis Instagram, TikTok… → « Est ouverte » → « Exécuter immédiatement ».</li><li>Action « Aller à l’écran d’accueil » (+ « Afficher une notification » : « Tu es en focus 🌱 »).</li></ol></div>
+    <div class="card" style="background:var(--card2)"><b>Huawei</b><ol class="sm"><li>Paramètres → Équilibre digital → Gestion du temps d’écran.</li><li>Limites d’applications : choisis les applis à bloquer et une limite très courte.</li><li>Laisse le Navigateur (qui fait tourner Élan) et tes applis de travail hors limite.</li><li>Protège le tout avec un code PIN.</li></ol></div>
+    <button class="btn big" data-a="closeSheet">Compris</button>`)},
   runRoutine, editRoutine,
   rrNext(){if(!RR)return;if(RR.i+1>=RR.r.steps.length)endRR(true);else{RR.i++;vibrate([25]);buildRR()}},
   rrQuit(){endRR(false)},
@@ -521,12 +600,15 @@ document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.targ
   else if(t.dataset&&t.dataset.f==='newsub'){e.preventDefault();A.addSub(t.dataset.id)}else if(t.dataset&&t.dataset.f==='title'){t.blur()}});
 document.addEventListener('change',e=>{const t=e.target,f=t.dataset&&t.dataset.f;if(!f)return;
   if(f.startsWith('set:')){const k=f.slice(4);let v=t.value;if(k==='focus'||k==='brk')v=Math.min(k==='focus'?180:60,Math.max(1,parseInt(v)||1));if(k==='vib')v=v==='1';
-    S.settings[k]=v;if((k==='focus'||k==='brk')&&S.timer.state==='idle')resetT(S.timer.mode);save();if(k==='theme')document.documentElement.dataset.theme=v;return}
+    S.settings[k]=v;if((k==='focus'||k==='brk')&&S.timer.state==='idle')resetT(S.timer.mode);save();if(k==='theme')document.documentElement.dataset.theme=v;if(k==='tree'&&UI.tab==='focus')render();return}
   if(f==='ftask'){S.timer.taskId=t.value;save();render();return}
   const task=S.tasks.find(x=>x.id===t.dataset.id);if(!task||f==='newsub')return;
   if(f==='title'){if(t.value.trim())task.title=t.value.trim()}else if(f==='est')task.est=+t.value;else if(f==='client')task.client=t.value.trim();else if(f==='due')task.due=t.value;
   S.blocks.forEach(b=>{if(b.taskId===task.id)b.t=task.title});save()});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(S.timer.state==='run'){wake(true);tick()}liveToday()}});
+document.addEventListener('visibilitychange',()=>{const T=S.timer;
+  if(document.visibilityState==='hidden'){if(T.state==='run'&&T.mode==='focus'&&S.settings.tree==='strict'&&!T.dead){T.hiddenAt=Date.now();save();
+    if(!(T.exceptUntil>Date.now()))notify('🌱 Ton arbre pousse…',`Reviens dans ${GRACE} secondes, sinon il va faner.`)}return}
+  checkTree();if(T.state==='run'){wake(true);tick()}liveToday()});
 
 /* rappels doux des blocs : 5 min avant + au début */
 const notified=new Set();
@@ -535,6 +617,7 @@ setInterval(()=>{liveToday();const n=nowMin();S.blocks.filter(b=>b.d===dkey()&&!
   if(n>=st&&n<st+1&&!notified.has(b.id)){notified.add(b.id);toast('⏰ C’est l’heure : '+b.t);vibrate();chime();notify('C’est l’heure ⏰',b.t)}})},15000);
 
 /* ---------- démarrage ---------- */
+checkTree();
 if(S.timer.state==='run'){if(S.timer.endAt<=Date.now()){S.timer.left=0;render();finishT()}else{ensureTick();render()}}else render();
 try{if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
 })();
